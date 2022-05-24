@@ -11,11 +11,12 @@ import java.lang.Exception
 
 const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
-val DELAY: Long = 3000
+const val DELAY: Long = 3000
 
 @SuppressLint("SetJavaScriptEnabled")
 class DiningScrapper(
     context: Context,
+    val nextWeek: Boolean = false,
     private var onFinish: ((List<ReserveRecord>) -> Unit)
 ) : WebScraper(context) {
     val scope = CoroutineScope(Dispatchers.Default)
@@ -26,10 +27,14 @@ class DiningScrapper(
         webView.settings.javaScriptEnabled = true
     }
 
+    private var groupIndexToRun = 0
+    private var restaurantIndexToRun = 0
+
     private val theList = mutableListOf<ReserveRecord>()
     fun start() {
         clearAll()
         loadURL("https://dining2.ut.ac.ir")
+
         setOnPageLoadedListener {
             val usernameField = findElementById("username")
             val passwordField = findElementById("password")
@@ -46,8 +51,7 @@ class DiningScrapper(
         loadURL("https://dining2.ut.ac.ir/Reserves")
     }
 
-    private var groupIndexToRun = 0
-    private var restaurantIndexToRun = 0
+
     private var groups = emptyList<String>()
     private var restaurants = emptyList<String>()
 
@@ -100,6 +104,12 @@ class DiningScrapper(
         setRestaurant(restaurant) { // on reservation fetch requested:
             scope.launch {
                 delay(DELAY)
+                if (nextWeek && restaurantIndexToRun == 1 && groupIndexToRun == 1) {
+                    withContext(Dispatchers.Main) {
+                        findElementById("NextWeek").click()
+                    }
+                    delay(DELAY)
+                }
                 withContext(Dispatchers.Main) {
                     // extract table
                     val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
