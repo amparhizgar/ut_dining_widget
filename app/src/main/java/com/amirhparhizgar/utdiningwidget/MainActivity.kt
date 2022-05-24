@@ -23,7 +23,7 @@ val TAG = "amir"
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val webScraper = DiningScrapper(this)
+        val webScraper = DiningScrapper(this, {})
         webScraper.start()
 //        webScraper.loadReserve("");
         setContent {

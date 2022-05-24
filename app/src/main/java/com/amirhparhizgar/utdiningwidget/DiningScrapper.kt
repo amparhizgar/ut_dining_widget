@@ -14,7 +14,10 @@ const val PERSON_GROUP_ID = "PersonGroup"
 val DELAY: Long = 3000
 
 @SuppressLint("SetJavaScriptEnabled")
-class DiningScrapper(context: Context) : WebScraper(context) {
+class DiningScrapper(
+    context: Context,
+    private var onFinish: ((List<ReserveRecord>) -> Unit)
+) : WebScraper(context) {
     val scope = CoroutineScope(Dispatchers.Default)
 
     init {
@@ -23,7 +26,7 @@ class DiningScrapper(context: Context) : WebScraper(context) {
         webView.settings.javaScriptEnabled = true
     }
 
-    val theList = mutableListOf<String>()
+    private val theList = mutableListOf<ReserveRecord>()
     fun start() {
         clearAll()
         loadURL("https://dining2.ut.ac.ir")
@@ -38,15 +41,15 @@ class DiningScrapper(context: Context) : WebScraper(context) {
         }
     }
 
-    fun loadReserve(str: String) {
+    private fun loadReserve(str: String) {
         setOnPageLoadedListener(::onReservePageLoaded)
         loadURL("https://dining2.ut.ac.ir/Reserves")
     }
 
-    var groupIndexToRun = 0
-    var restaurantIndexToRun = 0
-    var groups = emptyList<String>()
-    var restaurants = emptyList<String>()
+    private var groupIndexToRun = 0
+    private var restaurantIndexToRun = 0
+    private var groups = emptyList<String>()
+    private var restaurants = emptyList<String>()
 
     private fun onReservePageLoaded(str: String) {
         val personGroup = Jsoup.parse(html).getElementById(PERSON_GROUP_ID)
@@ -114,7 +117,7 @@ class DiningScrapper(context: Context) : WebScraper(context) {
                                 val foodNameLabels = foodItem.getElementsByTag("label")
                                 val label = foodNameLabels[0].ownText()
                                 if (checked) {
-                                    theList.add("$date: $mealName")
+                                    theList.add(ReserveRecord(date!!, mealName, label))
                                     Log.d(TAG, "$date: $mealName: $label")
                                 }
                             }
@@ -125,6 +128,8 @@ class DiningScrapper(context: Context) : WebScraper(context) {
                     else
                         if (groupIndexToRun < groups.size)
                             nextGroup()
+                        else
+                            onFinish(theList)
                 }
             }
         }
