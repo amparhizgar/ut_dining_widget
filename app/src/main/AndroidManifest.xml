@@ -25,6 +25,18 @@
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+		<activity
+			tools:node="remove"
+			android:name="com.daandtu.webscraper.MainTest"
+			android:label="@string/app_name"
+			android:theme="@style/AppTheme"
+			android:exported="true">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity>
 	</application>
 
 </manifest>

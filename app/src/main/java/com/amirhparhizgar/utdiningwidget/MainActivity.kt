@@ -1,6 +1,7 @@
 package com.amirhparhizgar.utdiningwidget
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Row
@@ -13,17 +14,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
+import com.daandtu.webscraper.Element
 import com.daandtu.webscraper.WebScraper
+import kotlin.math.log
 
+val TAG = "amir"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val webScraper = WebScraper(this)
-        webScraper.setUserAgentToDesktop(true) //default: false
-        webScraper.setLoadImages(true) //default: false
-        webScraper.loadURL("https://time.ir")
-
+        val webScraper = DiningScrapper(this)
+        webScraper.start()
+//        webScraper.loadReserve("");
         setContent {
             UTDiningWidgetTheme {
                 // A surface container using the 'background' color from the theme

@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId "com.amirhparhizgar.utdiningwidget"
         minSdk 21
-        targetSdk 30
+        targetSdk 31
         versionCode 1
         versionName "1.0"
 
@@ -61,4 +61,6 @@ dependencies {
 
     // web-scraper
     implementation 'com.daandtu:android-web-scraper:1.0.1'
+    // jsoup
+    implementation 'org.jsoup:jsoup:1.15.1'
 }
