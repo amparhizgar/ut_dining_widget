@@ -11,15 +11,15 @@ import java.lang.Exception
 
 const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
-const val DELAY: Long = 3000
+const val DELAY: Long = 1500
 
 @SuppressLint("SetJavaScriptEnabled")
 class DiningScrapper(
-    context: Context,
-    val nextWeek: Boolean = false,
-    private var onFinish: ((List<ReserveRecord>) -> Unit)
+    context: Context
 ) : WebScraper(context) {
     val scope = CoroutineScope(Dispatchers.Default)
+    var nextWeek: Boolean = false
+    var onFinish: ((List<ReserveRecord>) -> Unit)? = null
 
     init {
         setUserAgentToDesktop(true) //default: false
@@ -34,7 +34,8 @@ class DiningScrapper(
     fun start() {
         clearAll()
         loadURL("https://dining2.ut.ac.ir")
-
+        groupIndexToRun = 0
+        restaurantIndexToRun = 0
         setOnPageLoadedListener {
             val usernameField = findElementById("username")
             val passwordField = findElementById("password")
@@ -127,7 +128,13 @@ class DiningScrapper(
                                 val foodNameLabels = foodItem.getElementsByTag("label")
                                 val label = foodNameLabels[0].ownText()
                                 if (checked) {
-                                    theList.add(ReserveRecord(date!!, mealName, label))
+                                    theList.add(
+                                        ReserveRecord(
+                                            date!!.substringAfter("-"),
+                                            mealName,
+                                            label
+                                        )
+                                    )
                                     Log.d(TAG, "$date: $mealName: $label")
                                 }
                             }
@@ -139,7 +146,7 @@ class DiningScrapper(
                         if (groupIndexToRun < groups.size)
                             nextGroup()
                         else
-                            onFinish(theList)
+                            onFinish?.let { it(theList) }
                 }
             }
         }
