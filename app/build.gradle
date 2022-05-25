@@ -74,4 +74,8 @@ dependencies {
     implementation "androidx.work:work-runtime-ktx:$work_version"
     androidTestImplementation "androidx.work:work-testing:$work_version"
     implementation "androidx.concurrent:concurrent-futures:1.1.0"
+
+    //data store
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
+
 }

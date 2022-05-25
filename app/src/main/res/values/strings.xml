@@ -1,3 +1,10 @@
 <resources>
 	<string name="app_name">UT Dining Widget</string>
+	<string name="account">"Account: "</string>
+	<string name="no_account">No Account</string>
+	<string name="set_account">Set Account</string>
+	<string name="password">Password</string>
+	<string name="username">Username</string>
+	<string name="save">Save</string>
+	<string name="get_data_now">Get Data Now</string>
 </resources>

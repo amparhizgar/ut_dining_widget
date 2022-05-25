@@ -1,29 +1,46 @@
 package com.amirhparhizgar.utdiningwidget
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.lifecycleScope
 import androidx.work.*
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
 import com.amirhparhizgar.utdiningwidget.worker.ScrapWorker
-import kotlinx.coroutines.flow.flowOf
+import com.amirhparhizgar.utdiningwidget.worker.ScrapWorkerImpl
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
 
 val TAG = "amir"
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+val USERNAME_KEY = stringPreferencesKey("username")
+val PASSWORD_KEY = stringPreferencesKey("password")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +49,6 @@ class MainActivity : ComponentActivity() {
         enqueueScrapWork()
         val db = getDBInstance(this).dao()
         val f = db.loadAll()
-
         setContent {
             UTDiningWidgetTheme {
                 // A surface container using the 'background' color from the theme
@@ -41,16 +57,121 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background
                 ) {
                     val state = f.collectAsState(initial = emptyList())
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                    val showDialog = remember { mutableStateOf(false) }
+                    if (showDialog.value)
+                        AccountDialog(showDialog)
+
+                    Column(
+                        Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(8.dp)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = stringResource(id = R.string.account))
+                            val username = usernameFlow.collectAsState(initial = "")
+                            Text(text = username.value.ifEmpty { stringResource(id = R.string.no_account) })
+                            Spacer(modifier = Modifier.weight(1f))
+                            Button(onClick = { showDialog.value = true }) {
+                                Text(text = stringResource(id = R.string.set_account))
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val loadingState = remember {
+                                mutableStateOf(false)
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            if (loadingState.value)
+                                CircularProgressIndicator()
+                            val getDataEnabled = applicationContext.dataStore.data.map {
+                                it[USERNAME_KEY].isNullOrEmpty()
+                                    .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
+                                    .and(loadingState.value.not())
+                            }.collectAsState(initial = false)
+                            Button(onClick = {
+                                lifecycleScope.launch {
+                                    loadingState.value = true
+                                    ScrapWorkerImpl(applicationContext).doWork()
+                                    loadingState.value = false
+                                }
+                            }, enabled = getDataEnabled.value) {
+                                Text(text = stringResource(id = R.string.get_data_now))
+                            }
+                        }
                         state.value.sortedBy { it.date }.forEach {
-                            Greeting(it.toString())
+                            FoodItem(it.toString())
                         }
                         if (state.value.isEmpty())
-                            Greeting("nothing found")
+                            FoodItem("nothing found")
                     }
                 }
             }
         }
+    }
+
+    @Composable
+    private fun AccountDialog(showDialog: MutableState<Boolean>) {
+        Dialog(onDismissRequest = { showDialog.value = false }) {
+            Card(
+                backgroundColor = MaterialTheme.colors.background
+            ) {
+                val usernameState = remember {
+                    mutableStateOf<String>(runBlocking {
+                        withTimeoutOrNull(100) { usernameFlow.firstOrNull() } ?: ""
+                    })
+                }
+                val passwordState = remember { mutableStateOf("") }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = usernameState.value,
+                        onValueChange = { usernameState.value = it },
+                        label = { Text(stringResource(id = R.string.username)) }
+                    )
+                    OutlinedTextField(
+                        value = passwordState.value,
+                        onValueChange = { passwordState.value = it },
+                        label = { Text(stringResource(id = R.string.password)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                    )
+                    Button(
+                        modifier = Modifier.align(alignment = Alignment.End),
+                        onClick = {
+                            saveUsernameAndPassword(
+                                usernameState.value,
+                                passwordState.value
+                            )
+                            showDialog.value = false
+                        }) {
+                        Text(text = stringResource(id = R.string.save))
+                    }
+                }
+            }
+        }
+    }
+
+    fun saveUsernameAndPassword(username: String, password: String) =
+        lifecycleScope.launch(Dispatchers.IO) {
+            applicationContext.dataStore.edit {
+                it[USERNAME_KEY] = username
+                it[PASSWORD_KEY] = password
+            }
+        }
+
+    private val usernameFlow: Flow<String> by lazy {
+        applicationContext.dataStore.data
+            .map { preferences ->
+                preferences[USERNAME_KEY] ?: ""
+            }
     }
 
     private fun enqueueScrapWork() {
@@ -71,7 +192,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String) {
+fun FoodItem(name: String) {
     Text(text = name)
 }
 
@@ -79,6 +200,6 @@ fun Greeting(name: String) {
 @Composable
 fun DefaultPreview() {
     UTDiningWidgetTheme {
-        Greeting("Android")
+        FoodItem("Android")
     }
 }

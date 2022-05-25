@@ -6,6 +6,8 @@ import android.util.Log
 import android.webkit.WebView
 import com.daandtu.webscraper.WebScraper
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import org.jsoup.Jsoup
 import java.lang.Exception
 
@@ -20,11 +22,19 @@ class DiningScrapper(
     val scope = CoroutineScope(Dispatchers.Default)
     var nextWeek: Boolean = false
     var onFinish: ((List<ReserveRecord>) -> Unit)? = null
+    private lateinit var username: String
+    private lateinit var password: String
 
     init {
         setUserAgentToDesktop(true) //default: false
         setLoadImages(true) //default: false
         webView.settings.javaScriptEnabled = true
+        runBlocking {
+            context.dataStore.data.map {
+                username = it[USERNAME_KEY] ?: ""
+                password = it[PASSWORD_KEY] ?: ""
+            }.first()
+        }
     }
 
     private var groupIndexToRun = 0
@@ -33,18 +43,18 @@ class DiningScrapper(
     private val theList = mutableListOf<ReserveRecord>()
     fun start() {
         clearAll()
-        loadURL("https://dining2.ut.ac.ir")
         groupIndexToRun = 0
         restaurantIndexToRun = 0
         setOnPageLoadedListener {
             val usernameField = findElementById("username")
             val passwordField = findElementById("password")
             val submit = findElementByName("submit")
-            usernameField.text = "*****************"
-            passwordField.text = "*****************"
+            usernameField.text = username
+            passwordField.text = password
             setOnPageLoadedListener(::loadReserve)
             submit.click()
         }
+        loadURL("https://dining2.ut.ac.ir")
     }
 
     private fun loadReserve(str: String) {

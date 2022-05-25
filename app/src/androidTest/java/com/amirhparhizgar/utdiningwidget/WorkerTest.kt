@@ -27,11 +27,8 @@ class WorkerTest {
     @Test
     fun testSleepWorker() {
         val worker = TestListenableWorkerBuilder<ScrapWorker>(context).build()
-        runBlocking() {
+        runBlocking {
             val result = worker.startWork()
-            while (result != Result.success() || result != Result.failure()) {
-                delay(500)
-            }
             assertThat(result, `is`(Result.success()))
         }
     }
