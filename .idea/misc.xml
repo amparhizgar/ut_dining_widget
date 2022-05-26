@@ -3,8 +3,15 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/drawable-v21/app_widget_background.xml" value="0.1345" />
+        <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/drawable-v21/app_widget_inner_view_background.xml" value="0.1345" />
+        <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.1345" />
         <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/drawable/ic_launcher_background.xml" value="0.1165" />
         <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/layout/dining_widget.xml" value="0.25" />
+        <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.1345" />
+        <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/mipmap-anydpi-v26/ic_launcher_apple.xml" value="0.1345" />
+        <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/mipmap-anydpi-v26/ic_launcher_apple_round.xml" value="0.1345" />
+        <entry key="..\:/Android_Projects/UTDiningWidget/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.1345" />
       </map>
     </option>
   </component>
