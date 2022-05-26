@@ -2,6 +2,7 @@ package com.amirhparhizgar.utdiningwidget
 
 import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -31,7 +33,6 @@ import com.amirhparhizgar.utdiningwidget.worker.ScrapWorker
 import com.amirhparhizgar.utdiningwidget.worker.ScrapWorkerImpl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
@@ -49,6 +50,12 @@ class MainActivity : ComponentActivity() {
         enqueueScrapWork()
         val db = getDBInstance(this).dao()
         val f = db.loadAll()
+
+        val haveCredentials = applicationContext.dataStore.data.map {
+            it[USERNAME_KEY].isNullOrEmpty()
+                .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
+        }
+
         setContent {
             UTDiningWidgetTheme {
                 // A surface container using the 'background' color from the theme
@@ -89,18 +96,26 @@ class MainActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.weight(1f))
                             if (loadingState.value)
                                 CircularProgressIndicator()
-                            val getDataEnabled = applicationContext.dataStore.data.map {
-                                it[USERNAME_KEY].isNullOrEmpty()
-                                    .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
-                                    .and(loadingState.value.not())
-                            }.collectAsState(initial = false)
+                            val haveCredentialsState =
+                                haveCredentials.collectAsState(initial = false)
+                            val getDataEnabled =
+                                haveCredentialsState.value.and(loadingState.value.not())
+                            val context = LocalContext.current
                             Button(onClick = {
                                 lifecycleScope.launch {
                                     loadingState.value = true
-                                    ScrapWorkerImpl(applicationContext).doWork()
+                                    kotlin.runCatching {
+                                        ScrapWorkerImpl(applicationContext).doWork()
+                                    }.onFailure {
+                                        Toast.makeText(
+                                            context,
+                                            R.string.get_data_failed,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                     loadingState.value = false
                                 }
-                            }, enabled = getDataEnabled.value) {
+                            }, enabled = getDataEnabled) {
                                 Text(text = stringResource(id = R.string.get_data_now))
                             }
                         }
