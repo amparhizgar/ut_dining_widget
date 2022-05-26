@@ -24,17 +24,13 @@ class DiningScrapper(
     var onFinish: ((List<ReserveRecord>) -> Unit)? = null
     private lateinit var username: String
     private lateinit var password: String
+    private val dataStore = context.dataStore.data
 
     init {
         setUserAgentToDesktop(true) //default: false
         setLoadImages(true) //default: false
         webView.settings.javaScriptEnabled = true
-        runBlocking {
-            context.dataStore.data.map {
-                username = it[USERNAME_KEY] ?: ""
-                password = it[PASSWORD_KEY] ?: ""
-            }.first()
-        }
+
     }
 
     private var groupIndexToRun = 0
@@ -43,6 +39,12 @@ class DiningScrapper(
     private val theList = mutableListOf<ReserveRecord>()
     fun start() {
         clearAll()
+        runBlocking {
+            dataStore.map {
+                username = it[USERNAME_KEY] ?: ""
+                password = it[PASSWORD_KEY] ?: ""
+            }.first()
+        }
         groupIndexToRun = 0
         restaurantIndexToRun = 0
         setOnPageLoadedListener {
@@ -132,21 +134,21 @@ class DiningScrapper(
                         it.children().drop(1).forEach { day ->
                             val date = day.getElementById("DateDiv")?.text()
                             val foods = day.getElementsByClass("reserveFoodFoodDiv")
-                            foods.forEach { foodItem ->
+                            foods.forEachIndexed { index, foodItem ->
                                 val checked = foodItem.getElementsByTag("input")[0]
                                     .attr("checked") == "checked"
                                 val foodNameLabels = foodItem.getElementsByTag("label")
                                 val label = foodNameLabels[0].ownText()
-                                if (checked) {
-                                    theList.add(
-                                        ReserveRecord(
-                                            date!!.substringAfter("-").toJalali().toLongFormat(),
-                                            mealName,
-                                            label
-                                        )
+                                theList.add(
+                                    ReserveRecord(
+                                        date!!.substringAfter("-").toJalali().toLongFormat(),
+                                        mealName,
+                                        index,
+                                        label,
+                                        checked
                                     )
-                                    Log.d(TAG, "$date: $mealName: $label")
-                                }
+                                )
+                                Log.d(TAG, "$date: $mealName: $checked")
                             }
                         }
                     }

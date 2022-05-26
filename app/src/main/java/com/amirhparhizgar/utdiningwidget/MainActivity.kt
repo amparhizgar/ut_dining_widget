@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val db = getDBInstance(this).dao()
-        val recordListFlow = db.loadAllAfter(PersianDate().toLongFormat())
+        val recordListFlow = db.loadAllAfterReserved(PersianDate().toLongFormat())
 
         val haveCredentials = applicationContext.dataStore.data.map {
             it[USERNAME_KEY].isNullOrEmpty()
@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         if (showWebView.value)
-                            AndroidView(factory = {
+                            AndroidView(modifier = Modifier.height(600.dp), factory = {
                                 scrapWorker.scrapper.view
                             })
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {

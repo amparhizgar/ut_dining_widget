@@ -2,11 +2,7 @@ package com.amirhparhizgar.utdiningwidget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -17,8 +13,6 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -46,7 +40,7 @@ class DiningWidget : GlanceAppWidget() {
 
         val list = runBlocking<List<Item>> {
             // 4 hours offset to determine day
-            val list = db.loadAllByDate(dateStr.toJalali().toLongFormat())
+            val list = db.loadAllByDateReserved(dateStr.toJalali().toLongFormat())
             list.map {
                 return@map Item(it.meal, it.name.substringBefore("+"))
             }

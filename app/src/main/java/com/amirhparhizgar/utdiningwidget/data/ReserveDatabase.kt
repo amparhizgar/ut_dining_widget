@@ -8,7 +8,7 @@ import androidx.room.RoomDatabase
 import com.amirhparhizgar.utdiningwidget.ReserveRecord
 
 
-@Database(entities = [ReserveRecord::class], version = 2)
+@Database(entities = [ReserveRecord::class], version = 3)
 abstract class ReserveDatabase() : RoomDatabase() {
     abstract fun dao(): ReserveDao
 
