@@ -14,10 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.datastore.core.DataStore
@@ -36,6 +38,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import saman.zamani.persiandate.PersianDate
+import saman.zamani.persiandate.PersianDateFormat
 import java.util.concurrent.TimeUnit
 
 val TAG = "amir"
@@ -64,6 +68,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             UTDiningWidgetTheme {
+
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -125,13 +130,23 @@ class MainActivity : ComponentActivity() {
                                 Text(text = stringResource(id = R.string.get_data_now))
                             }
                         }
-                        state.value.sortedBy { it.date }.forEach {
-                            FoodItem(it.toString())
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            state.value.sortedBy { it.date }.groupBy { it.date }.forEach {
+
+                                Day(
+                                    date = it.key.toJalali()
+                                ) {
+                                    it.value.forEach { record ->
+                                        FoodItem(record)
+                                    }
+                                }
+                            }
+                            if (state.value.isEmpty())
+                                Text("nothing found")
                         }
-                        if (state.value.isEmpty())
-                            FoodItem("nothing found")
                     }
                 }
+
             }
         }
     }
@@ -180,7 +195,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun saveUsernameAndPassword(username: String, password: String) =
+    private fun saveUsernameAndPassword(username: String, password: String) =
         lifecycleScope.launch(Dispatchers.IO) {
             applicationContext.dataStore.edit {
                 it[USERNAME_KEY] = username
@@ -213,14 +228,46 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FoodItem(name: String) {
-    Text(text = name)
+fun Day(date: PersianDate, content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        Modifier
+            .padding(4.dp)
+            .fillMaxWidth(1f), elevation = 4.dp
+    ) {
+        Column(Modifier.padding(8.dp)) {
+            Row {
+                Text(text = date.dayName(), color = MaterialTheme.colors.secondary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = PersianDateFormat("j F").format(date))
+            }
+            this.content()
+        }
+    }
+
+}
+
+@Composable
+fun ColumnScope.FoodItem(item: ReserveRecord) {
+    Column {
+        Text(text = item.meal, color = MaterialTheme.colors.primary)
+        Text(text = item.name)
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     UTDiningWidgetTheme {
-        FoodItem("Android")
+
     }
+}
+
+fun String.toJalali(): PersianDate {
+    //1401/11/30
+    //0123456789
+    return PersianDate().initJalaliDate(
+        substring(0, 4).toInt(),
+        substring(5, 7).toInt(),
+        substring(8, 10).toInt()
+    )
 }
