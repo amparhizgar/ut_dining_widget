@@ -8,7 +8,7 @@
 	<string name="save">Save</string>
 	<string name="get_data_now">Get Data Now</string>
 	<string name="appwidget_text">still loading foods…</string>
-	<string name="add_widget">Add widget</string>
-	<string name="app_widget_description">This is an app widget description</string>
+	<string name="add_widget">Dining widget</string>
+	<string name="app_widget_description">shows reserved foods of day</string>
 	<string name="get_data_failed">Failed to get data!</string>
 </resources>

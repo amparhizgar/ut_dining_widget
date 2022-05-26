@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">UT Dining Widget</string>
+	<string name="account">"اکانت: "</string>
+	<string name="no_account">بدون اکانت</string>
+	<string name="set_account">تنظیم اکانت</string>
+	<string name="password">رمز ورود</string>
+	<string name="username">نام کاربری</string>
+	<string name="save">ذخیره</string>
+	<string name="get_data_now">دریافت اطلاعات</string>
+	<string name="appwidget_text">غذاها اینجا میاد...</string>
+	<string name="add_widget">ویجت تغذیه</string>
+	<string name="app_widget_description">غذاهای رزرو شدهٔ امروز</string>
+	<string name="get_data_failed">نشد که بشه!</string>
+</resources>
