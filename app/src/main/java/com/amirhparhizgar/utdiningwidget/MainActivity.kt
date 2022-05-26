@@ -2,9 +2,11 @@ package com.amirhparhizgar.utdiningwidget
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -51,7 +54,7 @@ val PASSWORD_KEY = stringPreferencesKey("password")
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        Log.d(TAG, "MainActivity->onCreate: UT Dining Widget is up")
         lifecycleScope.launch(Dispatchers.Default) {
             enqueueScrapWork()
             UpdateReceiver.schedule(applicationContext)
@@ -59,12 +62,13 @@ class MainActivity : ComponentActivity() {
         }
 
         val db = getDBInstance(this).dao()
-        val f = db.loadAll()
+        val recordListFlow = db.loadAllAfter(PersianDate().toLongFormat())
 
         val haveCredentials = applicationContext.dataStore.data.map {
             it[USERNAME_KEY].isNullOrEmpty()
                 .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
         }
+        val scrapWorker = ScrapWorkerImpl(applicationContext)
 
         setContent {
             UTDiningWidgetTheme {
@@ -74,7 +78,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    val state = f.collectAsState(initial = emptyList())
+                    val recordListState = recordListFlow.collectAsState(initial = emptyList())
                     val showDialog = remember { mutableStateOf(false) }
                     if (showDialog.value)
                         AccountDialog(showDialog)
@@ -96,6 +100,8 @@ class MainActivity : ComponentActivity() {
                                 Text(text = stringResource(id = R.string.set_account))
                             }
                         }
+                        val showWebView = remember { mutableStateOf(false) }
+
                         Row(
                             modifier = Modifier.padding(vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -106,7 +112,9 @@ class MainActivity : ComponentActivity() {
                             }
                             Spacer(modifier = Modifier.weight(1f))
                             if (loadingState.value)
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(Modifier.clickable {
+                                    showWebView.value = showWebView.value.not()
+                                })
                             val haveCredentialsState =
                                 haveCredentials.collectAsState(initial = false)
                             val getDataEnabled =
@@ -116,7 +124,9 @@ class MainActivity : ComponentActivity() {
                                 lifecycleScope.launch {
                                     loadingState.value = true
                                     kotlin.runCatching {
-                                        ScrapWorkerImpl(applicationContext).doWork()
+                                        withTimeout(2 * 60000) {
+                                            scrapWorker.doWork()
+                                        }
                                     }.onFailure {
                                         Toast.makeText(
                                             context,
@@ -125,14 +135,18 @@ class MainActivity : ComponentActivity() {
                                         ).show()
                                     }
                                     loadingState.value = false
+                                    showWebView.value = false
                                 }
                             }, enabled = getDataEnabled) {
                                 Text(text = stringResource(id = R.string.get_data_now))
                             }
                         }
+                        if (showWebView.value)
+                            AndroidView(factory = {
+                                scrapWorker.scrapper.view
+                            })
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            state.value.sortedBy { it.date }.groupBy { it.date }.forEach {
-
+                            recordListState.value.sortedBy { it.date }.groupBy { it.date }.forEach {
                                 Day(
                                     date = it.key.toJalali()
                                 ) {
@@ -141,7 +155,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                            if (state.value.isEmpty())
+                            if (recordListState.value.isEmpty())
                                 Text("nothing found")
                         }
                     }
@@ -270,4 +284,20 @@ fun String.toJalali(): PersianDate {
         substring(5, 7).toInt(),
         substring(8, 10).toInt()
     )
+}
+
+fun Long.toJalali(): PersianDate {
+    //14011130
+    //01234567
+    toString().apply {
+        return PersianDate().initJalaliDate(
+            substring(0, 4).toInt(),
+            substring(4, 6).toInt(),
+            substring(6, 8).toInt()
+        )
+    }
+}
+
+fun PersianDate.toLongFormat(): Long {
+    return shYear * 10000L + shMonth * 100 + shDay
 }

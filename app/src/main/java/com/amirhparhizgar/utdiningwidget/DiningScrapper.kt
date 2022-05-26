@@ -140,7 +140,7 @@ class DiningScrapper(
                                 if (checked) {
                                     theList.add(
                                         ReserveRecord(
-                                            date!!.substringAfter("-"),
+                                            date!!.substringAfter("-").toJalali().toLongFormat(),
                                             mealName,
                                             label
                                         )

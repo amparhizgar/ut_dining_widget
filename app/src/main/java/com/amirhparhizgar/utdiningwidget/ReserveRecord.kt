@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(primaryKeys = ["date", "meal"])
 data class ReserveRecord(
-    val date: String,
+    val date: Long,
     val meal: String,
     val name: String
 )

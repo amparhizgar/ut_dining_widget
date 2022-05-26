@@ -27,9 +27,11 @@ class ScrapWorker(
 }
 
 class ScrapWorkerImpl(private val applicationContext: Context) {
+
+    val scrapper = DiningScrapper(applicationContext)
+
     suspend fun doWork(): ListenableWorker.Result {
         kotlin.runCatching {
-            val scrapper = DiningScrapper(applicationContext)
             val list1 = withTimeout(60 * 1000) {
                 suspendCoroutine<List<ReserveRecord>> { cont ->
                     val onFinished = { list: List<ReserveRecord> ->
