@@ -25,6 +25,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
 import androidx.work.*
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.Default) {
             enqueueScrapWork()
             UpdateReceiver.schedule(applicationContext)
+            DiningWidget().updateAll(applicationContext)
         }
 
         val db = getDBInstance(this).dao()

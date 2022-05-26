@@ -2,7 +2,10 @@ package com.amirhparhizgar.utdiningwidget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -76,20 +79,9 @@ class DiningWidget : GlanceAppWidget() {
     fun FoodItem(item: Item) {
         Row {
             Text(
-                text = item.meal,
+                text = item.meal.trim() + ": " + item.foodName.trim(),
                 style = TextStyle(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = ColorProvider(
-                        color = Color.White
-                    )
-                )
-            )
-            Spacer(GlanceModifier.width(4.dp))
-            Text(
-                text = item.foodName,
-                style = TextStyle(
-                    fontWeight = FontWeight.Normal,
                     fontSize = 16.sp,
                     color = ColorProvider(
                         color = Color.White
