@@ -13,7 +13,7 @@ import java.lang.Exception
 
 const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
-const val DELAY: Long = 1500
+const val DELAY: Long = 2000
 
 @SuppressLint("SetJavaScriptEnabled")
 class DiningScrapper(
