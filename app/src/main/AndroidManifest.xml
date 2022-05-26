@@ -3,40 +3,46 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	package="com.amirhparhizgar.utdiningwidget">
 
-	<uses-permission
-		android:name="android.permission.INTERNET" />
-
 	<application
 		android:allowBackup="true"
 		android:icon="@mipmap/ic_launcher"
 		android:label="@string/app_name"
 		android:roundIcon="@mipmap/ic_launcher_round"
 		android:supportsRtl="true"
-		tools:replace="android:theme"
-		android:theme="@style/Theme.UTDiningWidget">
+		android:theme="@style/Theme.UTDiningWidget"
+		tools:replace="android:theme">
 		<activity
 			android:name=".MainActivity"
-			tools:replace="android:exported"
 			android:exported="true"
-			android:theme="@style/Theme.UTDiningWidget">
+			android:theme="@style/Theme.UTDiningWidget"
+			tools:replace="android:exported">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+
 		<activity
-			tools:node="remove"
 			android:name="com.daandtu.webscraper.MainTest"
+			android:exported="true"
 			android:label="@string/app_name"
 			android:theme="@style/AppTheme"
-			android:exported="true">
+			tools:node="remove">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+		<receiver
+			android:name=".UpdateReceiver"
+			android:enabled="true"
+			android:exported="true">
+			<intent-filter>
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+			</intent-filter>
+		</receiver>
 
 		<receiver
 			android:name=".DiningWidgetReceiver"
@@ -51,4 +57,6 @@
 		</receiver>
 	</application>
 
+	<uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
 </manifest>

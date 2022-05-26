@@ -43,7 +43,6 @@ class DiningWidget : GlanceAppWidget() {
 
         val list = runBlocking<List<Item>> {
             // 4 hours offset to determine day
-
             val list = db.loadAllByDate(dateStr)
             list?.map {
                 return@map Item(it.meal, it.name.substringBefore("+"))

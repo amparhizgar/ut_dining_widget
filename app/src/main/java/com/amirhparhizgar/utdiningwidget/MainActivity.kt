@@ -47,7 +47,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        enqueueScrapWork()
+        lifecycleScope.launch(Dispatchers.Default) {
+            enqueueScrapWork()
+            UpdateReceiver.schedule(applicationContext)
+        }
+
         val db = getDBInstance(this).dao()
         val f = db.loadAll()
 
