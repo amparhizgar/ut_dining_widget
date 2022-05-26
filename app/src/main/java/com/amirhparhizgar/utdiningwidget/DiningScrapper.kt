@@ -67,6 +67,7 @@ class DiningScrapper(
 
     private var groups = emptyList<String>()
     private var restaurants = emptyList<String>()
+    private var restaurantNames = emptyList<String>()
 
     private fun onReservePageLoaded(str: String) {
         val personGroup = Jsoup.parse(html).getElementById(PERSON_GROUP_ID)
@@ -101,6 +102,10 @@ class DiningScrapper(
                         restaurants = restaurantSelect?.children()?.map {
                             it.attr("value")
                         }?.filter { it != "0" } ?: throw Exception("empty restaurant!")
+
+                        restaurantNames = restaurantSelect.children().map {
+                            it.ownText()
+                        }.filter { it != "0" }
 
                         restaurantIndexToRun = 0
                         nextRestaurant()
@@ -143,6 +148,8 @@ class DiningScrapper(
                                     ReserveRecord(
                                         date!!.substringAfter("-").toJalali().toLongFormat(),
                                         mealName,
+                                        groupIndexToRun - 1,
+                                        restaurantNames[restaurantIndexToRun-1],
                                         index,
                                         label,
                                         checked

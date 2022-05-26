@@ -54,10 +54,8 @@ class DiningWidget : GlanceAppWidget() {
         }
 
         Widget(
-            context = LocalContext.current,
             pDate.dayName(),
             list,
-            modifier = GlanceModifier
         )
     }
 
@@ -67,17 +65,19 @@ class DiningWidget : GlanceAppWidget() {
 
     @Composable
     fun Widget(
-        context: Context,
         today: String,
         list: List<Item>,
-        modifier: GlanceModifier
     ) {
         Column(
             modifier = GlanceModifier.fillMaxWidth().cornerRadius(8.dp).clickable(callback)
                 .background(Color(0f, 0f, 0f, 0.15f)).padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = today, modifier = GlanceModifier.clickable(callback))
+            Text(text = today,style = TextStyle(
+                color = ColorProvider(
+                    color = Color.LightGray
+                )
+            ), modifier = GlanceModifier.clickable(callback))
             list.forEach {
                 FoodItem(it)
             }
