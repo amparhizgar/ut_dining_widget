@@ -25,6 +25,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import saman.zamani.persiandate.PersianDate
 import saman.zamani.persiandate.PersianDateFormat
@@ -39,13 +40,17 @@ class DiningWidget : GlanceAppWidget() {
 
     @Composable
     override fun Content() {
-        val db = getDBInstance(LocalContext.current).dao()
+        val context = LocalContext.current
+        val db = runBlocking(Dispatchers.IO) {
+            getDBInstance(context).dao()
+        }
+
         val pDate = PersianDate(System.currentTimeMillis() - 4 * 60 * 60000)
         val dateFormat =
             PersianDateFormat("Y/m/d", PersianDateFormat.PersianDateNumberCharacter.ENGLISH)
         val dateStr = dateFormat.format(pDate)
 
-        val list = runBlocking<List<Item>> {
+        val list = runBlocking(Dispatchers.IO) {
             // 4 hours offset to determine day
             val list = db.loadAllByDateReserved(dateStr.toJalali().toLongFormat())
             list.map {
