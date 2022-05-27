@@ -38,8 +38,8 @@ class UpdateReceiver : BroadcastReceiver() {
             c.second = 0
             if (c.time <= System.currentTimeMillis())
                 c.addDay(1)
-            AlarmManagerCompat.setExact(
-                context.getSystemService(ALARM_SERVICE) as AlarmManager, AlarmManager.RTC_WAKEUP,
+            (context.getSystemService(ALARM_SERVICE) as AlarmManager).set(
+                AlarmManager.RTC_WAKEUP,
                 c.time, pendingIntent
             )
             Log.d(TAG, "UpdateReceiver->schedule: widget update set for ${c.time}")
