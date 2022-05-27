@@ -13,7 +13,7 @@ import java.lang.Exception
 
 const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
-const val DELAY: Long = 2000
+const val DELAY: Long = 1000
 
 @SuppressLint("SetJavaScriptEnabled")
 class DiningScrapper(
@@ -90,12 +90,12 @@ class DiningScrapper(
     }
 
     private fun onGroupSelected(it: String) = scope.launch {
-        delay(DELAY)
         withContext(Dispatchers.Main) {
             webView.evaluateJavascript(
                 "getRest(false);"
             ) {
                 scope.launch {
+                    Log.d(TAG, "delay 3")
                     delay(DELAY)
                     withContext(Dispatchers.Main) {
                         val restaurantSelect = Jsoup.parse(html).getElementById(RESTAURANT)
@@ -119,54 +119,61 @@ class DiningScrapper(
         val restaurant = restaurants[restaurantIndexToRun]
         restaurantIndexToRun += 1
         Log.d(TAG, "DiningScrapper->nextRestaurant: selecting restaurant: $restaurant")
-        setRestaurant(restaurant) { // on reservation fetch requested:
-            scope.launch {
-                delay(DELAY)
-                if (nextWeek && restaurantIndexToRun == 1 && groupIndexToRun == 1) {
-                    withContext(Dispatchers.Main) {
-                        findElementById("NextWeek").click()
-                    }
-                    delay(DELAY)
-                }
+        if (restaurantIndexToRun > 1)
+            setRestaurant(restaurant, this::extract)
+        else
+            extract("")
+    }
+
+    private fun extract(unused: String) {
+        scope.launch {
+            Log.d(TAG, "delay 2")
+            delay(DELAY)
+            if (nextWeek && restaurantIndexToRun == 1 && groupIndexToRun == 1) {
                 withContext(Dispatchers.Main) {
-                    // extract table
-                    val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
-                    val parsed = Jsoup.parse(html)
-                    val masterDiv = parsed.selectXpath(masterDivXpath)[0]
-                    masterDiv.children().drop(2).forEach {
-                        val header = it.children()[0]
-                        val mealName = header.child(0).text()
-                        it.children().drop(1).forEach { day ->
-                            val date = day.getElementById("DateDiv")?.text()
-                            val foods = day.getElementsByClass("reserveFoodFoodDiv")
-                            foods.forEachIndexed { index, foodItem ->
-                                val checked = foodItem.getElementsByTag("input")[0]
-                                    .attr("checked") == "checked"
-                                val foodNameLabels = foodItem.getElementsByTag("label")
-                                val label = foodNameLabels[0].ownText()
-                                theList.add(
-                                    ReserveRecord(
-                                        date!!.substringAfter("-").toJalali().toLongFormat(),
-                                        mealName,
-                                        groupIndexToRun - 1,
-                                        restaurantNames[restaurantIndexToRun-1],
-                                        index,
-                                        label,
-                                        checked
-                                    )
+                    findElementById("NextWeek").click()
+                }
+                Log.d(TAG, "delay 1")
+                delay(DELAY)
+            }
+            withContext(Dispatchers.Main) {
+                // extract table
+                val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
+                val parsed = Jsoup.parse(html)
+                val masterDiv = parsed.selectXpath(masterDivXpath)[0]
+                masterDiv.children().drop(2).forEach {
+                    val header = it.children()[0]
+                    val mealName = header.child(0).text()
+                    it.children().drop(1).forEach { day ->
+                        val date = day.getElementById("DateDiv")?.text()
+                        val foods = day.getElementsByClass("reserveFoodFoodDiv")
+                        foods.forEachIndexed { index, foodItem ->
+                            val checked = foodItem.getElementsByTag("input")[0]
+                                .attr("checked") == "checked"
+                            val foodNameLabels = foodItem.getElementsByTag("label")
+                            val label = foodNameLabels[0].ownText()
+                            theList.add(
+                                ReserveRecord(
+                                    date!!.substringAfter("-").toJalali().toLongFormat(),
+                                    mealName,
+                                    groupIndexToRun - 1,
+                                    restaurantNames[restaurantIndexToRun - 1],
+                                    index,
+                                    label,
+                                    checked
                                 )
-                                Log.d(TAG, "$date: $mealName: $checked")
-                            }
+                            )
+                            Log.d(TAG, "$date: $mealName: $checked")
                         }
                     }
-                    if (restaurantIndexToRun < restaurants.size)
-                        nextRestaurant()
-                    else
-                        if (groupIndexToRun < groups.size)
-                            nextGroup()
-                        else
-                            onFinish?.let { it(theList) }
                 }
+                if (restaurantIndexToRun < restaurants.size)
+                    nextRestaurant()
+                else
+                    if (groupIndexToRun < groups.size)
+                        nextGroup()
+                    else
+                        onFinish?.let { it(theList) }
             }
         }
     }
