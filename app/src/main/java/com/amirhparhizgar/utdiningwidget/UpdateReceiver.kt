@@ -8,6 +8,7 @@ import android.content.Context.ALARM_SERVICE
 import android.content.Intent
 import android.icu.util.Calendar
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.AlarmManagerCompat
 import androidx.glance.appwidget.updateAll
@@ -24,23 +25,29 @@ class UpdateReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_MUTABLE
             else 0
             val pendingIntent = PendingIntent.getBroadcast(
-                context, 123, Intent(
-                    ACTION_ALARM_UPDATE_WIDGET
-                ), flag
+                context,
+                123,
+                Intent(context, UpdateReceiver::class.java).apply {
+                    action = ACTION_ALARM_UPDATE_WIDGET
+                },
+                flag
             )
             val c = PersianDate()
             c.hour = 4
             c.minute = 0
             c.second = 0
-            c.addDay(1)
+            if (c.time <= System.currentTimeMillis())
+                c.addDay(1)
             AlarmManagerCompat.setExact(
                 context.getSystemService(ALARM_SERVICE) as AlarmManager, AlarmManager.RTC_WAKEUP,
                 c.time, pendingIntent
             )
+            Log.d(TAG, "UpdateReceiver->schedule: widget update set for ${c.time}")
         }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        Log.d(TAG, "UpdateReceiver->onReceive: intent: $intent")
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
                 runBlocking {
