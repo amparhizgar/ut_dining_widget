@@ -9,7 +9,19 @@ data class ReserveRecord(
     val meal: String,
     val group: Int,
     val restaurant: String,
-    val index: Int,
     val name: String,
     val reserved: Boolean
 )
+
+fun List<ReserveRecord>.sortBasedOnMeal(): List<ReserveRecord> {
+    return this.sortedBy {
+        when (it.meal) {
+            "سحر" -> 1
+            "سحری" -> 1
+            "صبحانه" -> 2
+            "ناهار" -> 3
+            "شام" -> 4
+            else -> 5
+        }
+    }
+}

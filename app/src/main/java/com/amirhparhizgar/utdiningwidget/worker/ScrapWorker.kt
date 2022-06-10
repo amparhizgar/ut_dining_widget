@@ -21,7 +21,8 @@ class ScrapWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        return ScrapWorkerImpl(applicationContext).doWork()
+        val result = ScrapWorkerImpl(applicationContext).doWork()
+        return result
     }
 
 }

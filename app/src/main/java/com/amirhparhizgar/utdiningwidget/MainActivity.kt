@@ -63,7 +63,8 @@ class MainActivity : ComponentActivity() {
         }
 
         val db = getDBInstance(this).dao()
-        val recordListFlow = db.loadAllAfterReserved(PersianDate().toLongFormat())
+        val recordListFlow =
+            db.loadAllAfterReserved(PersianDate().toLongFormat()).map { it.sortBasedOnMeal() }
 
         val haveCredentials = applicationContext.dataStore.data.map {
             it[USERNAME_KEY].isNullOrEmpty()
@@ -266,7 +267,8 @@ fun ColumnScope.FoodItem(item: ReserveRecord) {
     Column {
         Text(text = item.meal, color = MaterialTheme.colors.primary)
         Text(text = item.name)
-        Text(text = item.restaurant, fontSize = 10.sp
+        Text(
+            text = item.restaurant, fontSize = 10.sp
         )
     }
 }

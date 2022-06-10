@@ -28,7 +28,7 @@ class DiningScrapper(
 
     init {
         setUserAgentToDesktop(true) //default: false
-        setLoadImages(true) //default: false
+        setLoadImages(false) //default: false
         webView.settings.javaScriptEnabled = true
 
     }
@@ -141,10 +141,10 @@ class DiningScrapper(
                 val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
                 val parsed = Jsoup.parse(html)
                 val masterDiv = parsed.selectXpath(masterDivXpath)[0]
-                masterDiv.children().drop(2).forEach {
-                    val header = it.children()[0]
+                masterDiv.children().drop(2).forEach { masterDivChild ->
+                    val header = masterDivChild.children()[0]
                     val mealName = header.child(0).text()
-                    it.children().drop(1).forEach { day ->
+                    masterDivChild.children().drop(1).forEach { day ->
                         val date = day.getElementById("DateDiv")?.text()
                         val foods = day.getElementsByClass("reserveFoodFoodDiv")
                         foods.forEachIndexed { index, foodItem ->
@@ -152,17 +152,16 @@ class DiningScrapper(
                                 .attr("checked") == "checked"
                             val foodNameLabels = foodItem.getElementsByTag("label")
                             val label = foodNameLabels[0].ownText()
-                            theList.add(
-                                ReserveRecord(
-                                    date!!.substringAfter("-").toJalali().toLongFormat(),
-                                    mealName,
-                                    groupIndexToRun - 1,
-                                    restaurantNames[restaurantIndexToRun - 1],
-                                    index,
-                                    label,
-                                    checked
-                                )
+                            val record = ReserveRecord(
+                                date!!.substringAfter("-").toJalali().toLongFormat(),
+                                mealName,
+                                groupIndexToRun - 1,
+                                restaurantNames[restaurantIndexToRun - 1],
+                                label,
+                                checked
                             )
+                            theList.add(record)
+//                            Log.d(TAG, "DiningScrapper->extract: $record")
                             Log.d(TAG, "$date: $mealName: $checked")
                         }
                     }
