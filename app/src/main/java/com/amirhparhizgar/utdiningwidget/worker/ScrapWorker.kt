@@ -1,11 +1,13 @@
 package com.amirhparhizgar.utdiningwidget.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.amirhparhizgar.utdiningwidget.DiningScrapper
 import com.amirhparhizgar.utdiningwidget.ReserveRecord
+import com.amirhparhizgar.utdiningwidget.TAG
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,6 +40,7 @@ class ScrapWorkerImpl(applicationContext: Context) {
             }
             saveResults(list2)
         }.onFailure {
+            Log.e(TAG, "doWork: Error Occurred", it)
             return ListenableWorker.Result.retry()
         }
         return ListenableWorker.Result.success()
