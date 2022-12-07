@@ -5,12 +5,12 @@ plugins {
 apply plugin: 'kotlin-kapt'
 
 android {
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.amirhparhizgar.utdiningwidget"
         minSdk 21
-        targetSdk 31
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -65,6 +65,10 @@ dependencies {
     implementation 'com.daandtu:android-web-scraper:1.0.1'
     // jsoup
     implementation 'org.jsoup:jsoup:1.15.1'
+    // okHttp3
+    implementation 'com.squareup.okhttp3:okhttp:3.2.0'
+    implementation 'com.squareup.okhttp3:okhttp-urlconnection:4.0.1'
+    implementation 'com.google.code.gson:gson:2.9.1'
 
     def room_version = "2.4.2"
     implementation "androidx.room:room-ktx:$room_version"
@@ -83,6 +87,6 @@ dependencies {
     implementation 'com.github.samanzamani:PersianDate:1.5.0'
 
     // glance for widgets
-    implementation "androidx.glance:glance-appwidget:1.0.0-SNAPSHOT"
+    implementation "androidx.glance:glance-appwidget:1.0.0-alpha04"
 
 }

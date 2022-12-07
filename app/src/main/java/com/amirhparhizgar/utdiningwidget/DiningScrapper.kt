@@ -3,13 +3,15 @@ package com.amirhparhizgar.utdiningwidget
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
+import android.view.View
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import com.daandtu.webscraper.WebScraper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.jsoup.Jsoup
-import java.lang.Exception
 
 const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
@@ -25,12 +27,38 @@ class DiningScrapper(
     private lateinit var username: String
     private lateinit var password: String
     private val dataStore = context.dataStore.data
+    private var onPageLoadedListener: (() -> Unit)? = null
 
     init {
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(view: WebView?, url: String): WebResourceResponse? {
+                Log.d(TAG, "shouldInterceptRequest: $url")
+                return if (url.endsWith(".css")
+                    || url.endsWith(".ico")
+                ) { // add other specific resources..
+                    WebResourceResponse(
+                        "text/css",
+                        "UTF-8", "".byteInputStream()
+                    )
+                } else
+                    super.shouldInterceptRequest(view, url)
+
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                onPageLoadedListener?.invoke()
+                webView.measure(
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                webView.layout(0, 0, webView.measuredWidth, webView.measuredHeight)
+                webView.isDrawingCacheEnabled = true
+            }
+        }
+
         setUserAgentToDesktop(true) //default: false
         setLoadImages(false) //default: false
         webView.settings.javaScriptEnabled = true
-
     }
 
     private var groupIndexToRun = 0
@@ -47,20 +75,20 @@ class DiningScrapper(
         }
         groupIndexToRun = 0
         restaurantIndexToRun = 0
-        setOnPageLoadedListener {
+        onPageLoadedListener = {
             val usernameField = findElementById("username")
             val passwordField = findElementById("password")
             val submit = findElementByName("submit")
             usernameField.text = username
             passwordField.text = password
-            setOnPageLoadedListener(::loadReserve)
+            onPageLoadedListener = ::loadReserve
             submit.click()
         }
         loadURL("https://dining2.ut.ac.ir")
     }
 
-    private fun loadReserve(str: String) {
-        setOnPageLoadedListener(::onReservePageLoaded)
+    private fun loadReserve() {
+        onPageLoadedListener = (::onReservePageLoaded)
         loadURL("https://dining2.ut.ac.ir/Reserves")
     }
 
@@ -69,7 +97,7 @@ class DiningScrapper(
     private var restaurants = emptyList<String>()
     private var restaurantNames = emptyList<String>()
 
-    private fun onReservePageLoaded(str: String) {
+    private fun onReservePageLoaded() {
         val personGroup = Jsoup.parse(html).getElementById(PERSON_GROUP_ID)
         groups = personGroup?.children()?.map {
             it.attr("value")
