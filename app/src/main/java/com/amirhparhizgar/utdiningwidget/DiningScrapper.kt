@@ -149,8 +149,10 @@ class DiningScrapper(
         waitForSpinner()
         // extract table
         val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
-        val parsed = Jsoup.parse(getHtmlInMain())
-        val masterDiv = parsed.selectXpath(masterDivXpath)[0]
+        while (Jsoup.parse(getHtmlInMain()).selectXpath(masterDivXpath).size == 0) {
+            delay(200)
+        }
+        val masterDiv = Jsoup.parse(getHtmlInMain()).selectXpath(masterDivXpath)[0]
         masterDiv.children().drop(2).forEach { masterDivChild ->
             val header = masterDivChild.children()[0]
             val mealName = header.child(0).text()
