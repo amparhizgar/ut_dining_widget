@@ -6,6 +6,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,8 +17,10 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -47,7 +51,7 @@ import saman.zamani.persiandate.PersianDate
 import saman.zamani.persiandate.PersianDateFormat
 import java.util.concurrent.TimeUnit
 
-val TAG = "amir"
+const val TAG = "amir"
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 val USERNAME_KEY = stringPreferencesKey("username")
@@ -67,7 +71,7 @@ class MainActivity : ComponentActivity() {
 
         val db = getDBInstance(this).dao()
         val recordListFlow =
-            db.loadAllAfterReserved(PersianDate().toLongFormat()).map { it.sortBasedOnMeal() }
+            db.loadAllAfter(PersianDate().toLongFormat()).map { it.sortBasedOnMeal() }
 
         val haveCredentials = applicationContext.dataStore.data.map {
             it[USERNAME_KEY].isNullOrEmpty()
@@ -151,15 +155,32 @@ class MainActivity : ComponentActivity() {
                                 scrapWorker.scrapper.view
                             })
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            recordListState.value.sortedBy { it.date }.groupBy { it.date }.forEach {
-                                Day(
-                                    date = it.key.toJalali()
-                                ) {
-                                    it.value.forEach { record ->
-                                        FoodItem(record)
+                            recordListState.value.sortedBy { it.date }.groupBy { it.date }
+                                .forEach { entry ->
+                                    val showNotReserved = remember { mutableStateOf(false) }
+                                    val meals = entry.value.distinctBy { it.meal }.map { it.meal }
+                                    val reserves = entry.value.filter { it.reserved }
+                                    val notReserves = entry.value.filter { it.reserved.not() }
+                                        .distinctBy { it.meal }
+                                        .filter {
+                                            reserves.map { r -> r.name }.contains(it.meal).not()
+                                        }
+
+                                    Day(
+                                        date = entry.key.toJalali(),
+                                        showNotReserved.value,
+                                        { showNotReserved.value = it },
+                                        notReserves.isNotEmpty()
+                                    ) {
+                                        meals.forEach { meal ->
+                                            FoodItem(
+                                                reserves.filter { it.meal == meal },
+                                                notReserves.filter { it.meal == meal },
+                                                showNotReserved.value
+                                            )
+                                        }
                                     }
                                 }
-                            }
                             if (recordListState.value.isEmpty())
                                 Text("nothing found")
                         }
@@ -177,7 +198,7 @@ class MainActivity : ComponentActivity() {
                 backgroundColor = MaterialTheme.colors.background
             ) {
                 val usernameState = remember {
-                    mutableStateOf<String>(runBlocking {
+                    mutableStateOf(runBlocking {
                         withTimeoutOrNull(100) { usernameFlow.firstOrNull() } ?: ""
                     })
                 }
@@ -247,7 +268,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Day(date: PersianDate, content: @Composable ColumnScope.() -> Unit) {
+fun Day(
+    date: PersianDate,
+    showNotReserved: Boolean,
+    onSetShowNotReserved: (Boolean) -> Unit,
+    showButton: Boolean,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Card(
         Modifier
             .padding(4.dp)
@@ -258,6 +285,20 @@ fun Day(date: PersianDate, content: @Composable ColumnScope.() -> Unit) {
                 Text(text = date.dayName(), color = MaterialTheme.colors.secondary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = PersianDateFormat("j F").format(date))
+                if (showButton) {
+                    val rotationState =
+                        animateFloatAsState(targetValue = if (showNotReserved) 180f else 0f)
+                    Icon(
+                        modifier = Modifier
+                            .padding(0.dp)
+                            .clickable {
+                                onSetShowNotReserved(showNotReserved.not())
+                            }
+                            .rotate(rotationState.value),
+                        painter = painterResource(id = R.drawable.ic_baseline_expand_more_24),
+                        contentDescription = "show not reserved"
+                    )
+                }
             }
             this.content()
         }
@@ -266,13 +307,24 @@ fun Day(date: PersianDate, content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun ColumnScope.FoodItem(item: ReserveRecord) {
+fun FoodItem(
+    reserves: List<ReserveRecord>,
+    notReserves: List<ReserveRecord>,
+    showNotReserved: Boolean
+) {
     Column {
-        Text(text = item.meal, color = MaterialTheme.colors.primary)
-        Text(text = item.name)
-        Text(
-            text = item.restaurant, fontSize = 10.sp
-        )
+        Text(text = reserves[0].meal, color = MaterialTheme.colors.primary)
+        reserves.forEach { reserved ->
+            Text(text = reserved.name)
+            Text(
+                text = reserved.restaurant, fontSize = 10.sp
+            )
+        }
+        AnimatedVisibility(visible = showNotReserved) {
+            notReserves.forEach {
+                Text(text = it.name, color = LocalContentColor.current.copy(alpha = 0.4f))
+            }
+        }
     }
 }
 
