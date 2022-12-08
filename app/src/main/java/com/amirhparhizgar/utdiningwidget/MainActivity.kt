@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
@@ -278,7 +279,7 @@ fun Day(
     Card(
         Modifier
             .padding(4.dp)
-            .fillMaxWidth(1f), elevation = 4.dp
+            .fillMaxWidth(1f), elevation = 2.dp, shape = RoundedCornerShape(16.dp)
     ) {
         Column(Modifier.padding(8.dp)) {
             Row {
@@ -300,6 +301,7 @@ fun Day(
                     )
                 }
             }
+            Divider(Modifier.padding(vertical = 4.dp))
             this.content()
         }
     }
@@ -315,14 +317,14 @@ fun FoodItem(
     Column {
         Text(text = reserves[0].meal, color = MaterialTheme.colors.primary)
         reserves.forEach { reserved ->
-            Text(text = reserved.name)
+            Text(text = "✅ ${reserved.name}")
             Text(
                 text = reserved.restaurant, fontSize = 10.sp
             )
         }
         AnimatedVisibility(visible = showNotReserved) {
             notReserves.forEach {
-                Text(text = it.name, color = LocalContentColor.current.copy(alpha = 0.4f))
+                Text(text = "❌ ${it.name}", color = LocalContentColor.current.copy(alpha = 0.4f))
             }
         }
     }
