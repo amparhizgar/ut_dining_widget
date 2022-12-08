@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.AlarmManagerCompat
 import androidx.glance.appwidget.updateAll
+import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
 import kotlinx.coroutines.runBlocking
 import saman.zamani.persiandate.PersianDate
 import java.util.*
@@ -54,6 +55,7 @@ class UpdateReceiver : BroadcastReceiver() {
                     DiningWidget().updateAll(context)
                 }
                 schedule(context)
+                context.scheduleForNearestWeekendIfNotScheduled()
             }
             ACTION_ALARM_UPDATE_WIDGET -> {
                 runBlocking {

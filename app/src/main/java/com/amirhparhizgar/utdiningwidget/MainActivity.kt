@@ -35,6 +35,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
 import androidx.work.*
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
+import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
 import com.amirhparhizgar.utdiningwidget.worker.ScrapWorker
 import com.amirhparhizgar.utdiningwidget.worker.ScrapWorkerImpl
@@ -57,7 +58,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity->onCreate: UT Dining Widget is up")
         lifecycleScope.launch(Dispatchers.Default) {
-            enqueueScrapWork()
+//            enqueueScrapWork()
+            scheduleForNearestWeekendIfNotScheduled()
+
             UpdateReceiver.schedule(applicationContext)
             DiningWidget().updateAll(applicationContext)
         }
