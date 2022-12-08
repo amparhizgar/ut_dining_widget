@@ -69,7 +69,9 @@ class DiningScrapper(
     }
 
     suspend fun start(): List<ReserveRecord> {
-        clearAll()
+        withContext(Dispatchers.Main) {
+            clearAll()
+        }
         login()
         loadReserve()
         return theList
@@ -82,11 +84,13 @@ class DiningScrapper(
         }.first()
 
         loadURLAndWait("https://dining2.ut.ac.ir")
-        val usernameField = findElementById("username")
-        val passwordField = findElementById("password")
-        val submit = findElementByName("submit")
-        usernameField.text = username
-        passwordField.text = password
+        val submit = withContext(Dispatchers.Main) {
+            val usernameField = findElementById("username")
+            val passwordField = findElementById("password")
+            usernameField.text = username
+            passwordField.text = password
+            findElementByName("submit")
+        }
         doAndAwaitLoad {
             submit.click()
         }
@@ -94,7 +98,7 @@ class DiningScrapper(
 
     private suspend fun loadReserve() {
         loadURLAndWait("https://dining2.ut.ac.ir/Reserves")
-        val personGroup = Jsoup.parse(html).getElementById(PERSON_GROUP_ID)
+        val personGroup = Jsoup.parse(getHtmlInMain()).getElementById(PERSON_GROUP_ID)
         val groups = personGroup?.children()?.map {
             Group(it.attr("value"), it.ownText())
         }?.filter { it.id != "0" } ?: return
