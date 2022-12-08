@@ -6,14 +6,15 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,9 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.datastore.core.DataStore
@@ -39,15 +38,17 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
 import androidx.work.*
+import androidx.work.Constraints
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
+import com.amirhparhizgar.utdiningwidget.pulltoload.PullToLoadIndicator
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
+import com.amirhparhizgar.utdiningwidget.worker.MainViewModel
 import com.amirhparhizgar.utdiningwidget.worker.ScrapWorker
 import com.amirhparhizgar.utdiningwidget.worker.ScrapWorkerImpl
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import saman.zamani.persiandate.PersianDate
 import saman.zamani.persiandate.PersianDateFormat
 import java.util.concurrent.TimeUnit
@@ -58,7 +59,10 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 val USERNAME_KEY = stringPreferencesKey("username")
 val PASSWORD_KEY = stringPreferencesKey("password")
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity->onCreate: UT Dining Widget is up")
@@ -70,9 +74,6 @@ class MainActivity : ComponentActivity() {
             DiningWidget().updateAll(applicationContext)
         }
 
-        val db = getDBInstance(this).dao()
-        val recordListFlow =
-            db.loadAllAfter(PersianDate().toLongFormat()).map { it.sortBasedOnMeal() }
 
         val haveCredentials = applicationContext.dataStore.data.map {
             it[USERNAME_KEY].isNullOrEmpty()
@@ -88,14 +89,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    val recordListState = recordListFlow.collectAsState(initial = emptyList())
+                    val recordListState = viewModel.incrementalFlow.collectAsState()
                     val showDialog = remember { mutableStateOf(false) }
                     if (showDialog.value)
                         AccountDialog(showDialog)
 
                     Column(
                         Modifier
-                            .verticalScroll(rememberScrollState())
                             .padding(8.dp)
                     ) {
                         Row(
@@ -156,19 +156,50 @@ class MainActivity : ComponentActivity() {
                                 scrapWorker.scrapper.view
                             })
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            recordListState.value.sortedBy { it.date }.groupBy { it.date }
-                                .forEach { entry ->
+                            val loading = remember { mutableStateOf(false) }
+                            val scope = rememberCoroutineScope()
+                            val pullState =
+                                rememberPullToLoadState(loading = loading.value, onLoad = {
+                                    scope.launch {
+                                        loading.value = true
+                                        viewModel.loadMore()
+                                        loading.value = false
+                                    }
+                                })
+
+                            val lazyListState = rememberLazyListState()
+                            LaunchedEffect(key1 = true) {
+                                scope.launch {
+                                    lazyListState.scrollToItem(
+                                        viewModel.incrementalFlow.drop(1).first().size
+                                    )
+                                }
+                            }
+
+                            LazyColumn(
+                                Modifier.pullToLoad(pullState),
+                                reverseLayout = true,
+                                state = lazyListState
+                            ) {
+
+                                val list = recordListState.value.groupBy { it.date }.toList()
+                                    .sortedBy { it.first }.asReversed()
+                                items(list.size, key = {
+                                    list[it].first
+                                }) { index ->
                                     val showNotReserved = remember { mutableStateOf(false) }
-                                    val meals = entry.value.distinctBy { it.meal }.map { it.meal }
-                                    val reserves = entry.value.filter { it.reserved }
-                                    val notReserves = entry.value.filter { it.reserved.not() }
-                                        .distinctBy { it.meal }
-                                        .filter {
-                                            reserves.map { r -> r.name }.contains(it.meal).not()
-                                        }
+                                    val meals =
+                                        list[index].second.distinctBy { it.meal }.map { it.meal }
+                                    val reserves = list[index].second.filter { it.reserved }
+                                    val notReserves =
+                                        list[index].second.filter { it.reserved.not() }
+                                            .distinctBy { it.meal }
+                                            .filter {
+                                                reserves.map { r -> r.name }.contains(it.meal).not()
+                                            }
 
                                     Day(
-                                        date = entry.key.toJalali(),
+                                        date = list[index].first.toJalali(),
                                         showNotReserved.value,
                                         { showNotReserved.value = it },
                                         notReserves.isNotEmpty()
@@ -182,6 +213,10 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 }
+                                item {
+                                    PullToLoadIndicator(loading = loading.value, state = pullState)
+                                }
+                            }
                             if (recordListState.value.isEmpty())
                                 Text("nothing found")
                         }

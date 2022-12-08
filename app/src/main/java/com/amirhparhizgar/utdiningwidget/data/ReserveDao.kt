@@ -16,7 +16,10 @@ interface ReserveDao {
     fun loadAllAfterReserved(vararg date: Long): Flow<List<ReserveRecord>>
 
     @Query("SELECT * FROM ReserveRecord WHERE date >= :date")
-    fun loadAllAfter(vararg date: Long): Flow<List<ReserveRecord>>
+    fun loadAllAfter(date: Long): Flow<List<ReserveRecord>>
+
+    @Query("SELECT * FROM ReserveRecord WHERE date >= :start AND date <= :end")
+    fun loadAllBetween(start: Long, end: Long): List<ReserveRecord>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(vararg reserves: ReserveRecord)
