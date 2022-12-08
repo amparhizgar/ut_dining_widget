@@ -195,7 +195,7 @@ class MainActivity : ComponentActivity() {
                                         list[index].second.filter { it.reserved.not() }
                                             .distinctBy { it.meal }
                                             .filter {
-                                                reserves.map { r -> r.name }.contains(it.meal).not()
+                                                reserves.map { r -> r.name }.contains(it.name).not()
                                             }
 
                                     Day(
@@ -350,7 +350,10 @@ fun FoodItem(
     showNotReserved: Boolean
 ) {
     Column {
-        Text(text = reserves[0].meal, color = MaterialTheme.colors.primary)
+        Text(
+            text = reserves.getOrElse(0) { notReserves[0] }.meal,
+            color = MaterialTheme.colors.primary
+        )
         reserves.forEach { reserved ->
             Text(text = "✅ ${reserved.name}")
             Text(
