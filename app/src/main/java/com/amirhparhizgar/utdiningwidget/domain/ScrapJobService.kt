@@ -8,10 +8,17 @@ import com.amirhparhizgar.utdiningwidget.data.getDBInstance
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
 import com.amirhparhizgar.utdiningwidget.ui.TAG
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ScrapJobService : JobService() {
+
     private val scope = CoroutineScope(Dispatchers.Main)
+
+    @Inject
+    lateinit var scrapper: DiningScrapper
 
     init {
         val builder: Configuration.Builder = Configuration.Builder()
@@ -21,7 +28,6 @@ class ScrapJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters?): Boolean {
         scope.launch {
             kotlin.runCatching {
-                val scrapper = DiningScrapper(applicationContext)
                 withContext(Dispatchers.IO) {
                     val list1 = withTimeout(10 * 1000) {
                         scrapper.start()

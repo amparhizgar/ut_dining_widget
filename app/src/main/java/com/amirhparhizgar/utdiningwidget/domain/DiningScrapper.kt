@@ -7,13 +7,17 @@ import android.view.View
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.ui.*
 import com.daandtu.webscraper.WebScraper
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -27,12 +31,12 @@ class Restaurant(val id: String, val name: String)
 
 @SuppressLint("SetJavaScriptEnabled")
 class DiningScrapper @Inject constructor(
-    @ApplicationContext context: Context
+    @ApplicationContext context: Context,
+    private val dataStore: DataStore<Preferences>
 ) : WebScraper(context) {
     var nextWeek: Boolean = false
     private lateinit var username: String
     private lateinit var password: String
-    private val dataStore = context.dataStore.data
     private var onPageLoadedListener: (() -> Unit)? = null
 
     private val theList = mutableListOf<ReserveRecord>()
@@ -82,7 +86,7 @@ class DiningScrapper @Inject constructor(
     }
 
     private suspend fun login() {
-        dataStore.map {
+        dataStore.data.map {
             username = it[USERNAME_KEY] ?: ""
             password = it[PASSWORD_KEY] ?: ""
         }.first()

@@ -1,6 +1,5 @@
 package com.amirhparhizgar.utdiningwidget.ui
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -10,53 +9,46 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
 import com.amirhparhizgar.utdiningwidget.R
-import com.amirhparhizgar.utdiningwidget.domain.UpdateWidgetReceiver
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
-import com.amirhparhizgar.utdiningwidget.pulltoload.pullToLoad
-import com.amirhparhizgar.utdiningwidget.pulltoload.PullToLoadIndicator
-import com.amirhparhizgar.utdiningwidget.pulltoload.rememberPullToLoadState
+import com.amirhparhizgar.utdiningwidget.domain.UpdateWidgetReceiver
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import saman.zamani.persiandate.PersianDate
 import saman.zamani.persiandate.PersianDateFormat
 
 const val TAG = "amir"
 
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 val USERNAME_KEY = stringPreferencesKey("username")
 val PASSWORD_KEY = stringPreferencesKey("password")
 
@@ -75,12 +67,6 @@ class MainActivity : ComponentActivity() {
             DiningWidget().updateAll(applicationContext)
         }
 
-
-        val haveCredentials = applicationContext.dataStore.data.map {
-            it[USERNAME_KEY].isNullOrEmpty()
-                .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
-        }
-
         setContent {
             UTDiningWidgetTheme {
 
@@ -91,184 +77,189 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val recordListState = viewModel.incrementalFlow.collectAsState()
                     val showDialog = remember { mutableStateOf(false) }
+
                     if (showDialog.value)
-                        AccountDialog(showDialog)
-
-                    Column(
-                        Modifier
-                            .padding(8.dp)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = stringResource(id = R.string.account))
-                            val username = usernameFlow.collectAsState(initial = "")
-                            Text(text = username.value.ifEmpty { stringResource(id = R.string.no_account) })
-                            Spacer(modifier = Modifier.weight(1f))
-                            Button(onClick = { showDialog.value = true }) {
-                                Text(text = stringResource(id = R.string.set_account))
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            Spacer(modifier = Modifier.weight(1f))
-                            if (viewModel.loadingState.value)
-                                CircularProgressIndicator(Modifier.clickable {
-                                    viewModel.showWebView.value = viewModel.showWebView.value.not()
-                                })
-                            val haveCredentialsState =
-                                haveCredentials.collectAsState(initial = false)
-                            val getDataEnabled =
-                                haveCredentialsState.value.and(viewModel.loadingState.value.not())
-                            Button(onClick = {
-                                lifecycleScope.launch {
-                                    viewModel.loadingState.value = true
-                                    viewModel.getData()
-                                }
-                            }, enabled = getDataEnabled) {
-                                Text(text = stringResource(id = R.string.get_data_now))
-                            }
-                        }
-                        if (viewModel.showWebView.value)
-                            AndroidView(modifier = Modifier.height(600.dp), factory = {
-                                viewModel.webView
+                        AccountDialog(
+                            onDismissRequest = { showDialog.value = false },
+                            username = runBlocking {
+                                viewModel.usernameFlow.firstOrNull() ?: ""
+                            },
+                            onSave = { username, password ->
+                                viewModel.saveUsernameAndPassword(username, password)
                             })
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            val loading = remember { mutableStateOf(false) }
-                            val scope = rememberCoroutineScope()
-                            val pullState =
-                                rememberPullToLoadState(loading = loading.value, onLoad = {
-                                    scope.launch {
-                                        loading.value = true
-                                        viewModel.loadMore()
-                                        loading.value = false
-                                    }
+
+                    var showMenu by remember { mutableStateOf(false) }
+
+                    val haveCredentialsState =
+                        viewModel.haveCredentials.collectAsState(initial = false)
+
+                    val getDataEnabled = remember {
+                        derivedStateOf {
+                            haveCredentialsState.value.and(viewModel.loadingState.value.not())
+                        }
+                    }
+
+                    Scaffold(topBar = {
+                        DiningTopBar(
+                            getDataEnabled.value,
+                            showMenu,
+                            onShowMenu = { showMenu = it },
+                            onShowAccountDialog = { showDialog.value = true },
+                            onGetData = { viewModel.getData() }
+                        )
+                    }) {
+                        Column(
+                            Modifier
+                                .padding(it)
+                        ) {
+
+                            val username = viewModel.usernameFlow.collectAsState(initial = "")
+
+                            TopSection(
+                                username.value, viewModel.loadingState.value,
+                                onShowAccountDialog = {
+                                    showDialog.value = true
+                                },
+                                onToggleWebView = {
+                                    viewModel.showWebView.value = viewModel.showWebView.value.not()
+                                }
+                            )
+
+                            if (viewModel.showWebView.value)
+                                AndroidView(modifier = Modifier.height(600.dp), factory = {
+                                    viewModel.webView
                                 })
 
-                            val lazyListState = rememberLazyListState()
-                            LaunchedEffect(key1 = true) {
-                                scope.launch {
-                                    lazyListState.scrollToItem(
-                                        viewModel.incrementalFlow.drop(1).first().size
-                                    )
-                                }
-                            }
-
-                            LazyColumn(
-                                Modifier.pullToLoad(pullState),
-                                reverseLayout = true,
-                                state = lazyListState
-                            ) {
-
-                                val list = recordListState.value.groupBy { it.date }.toList()
-                                    .sortedBy { it.first }.asReversed()
-                                items(list.size, key = {
-                                    list[it].first
-                                }) { index ->
-                                    val showNotReserved = remember { mutableStateOf(false) }
-                                    val meals =
-                                        list[index].second.distinctBy { it.meal }.map { it.meal }
-                                    val reserves = list[index].second.filter { it.reserved }
-                                    val notReserves =
-                                        list[index].second.filter { it.reserved.not() }
-                                            .distinctBy { it.meal }
-                                            .filter {
-                                                reserves.map { r -> r.name }.contains(it.name).not()
-                                            }
-
-                                    Day(
-                                        date = list[index].first.toJalali(),
-                                        showNotReserved.value,
-                                        { showNotReserved.value = it },
-                                        notReserves.isNotEmpty()
-                                    ) {
-                                        meals.forEach { meal ->
-                                            FoodItem(
-                                                reserves.filter { it.meal == meal },
-                                                notReserves.filter { it.meal == meal },
-                                                showNotReserved.value
-                                            )
-                                        }
-                                    }
-                                }
-                                item {
-                                    PullToLoadIndicator(loading = loading.value, state = pullState)
-                                }
-                            }
-                            if (recordListState.value.isEmpty())
-                                Text("nothing found")
+                            DataSection(recordListState, viewModel)
                         }
                     }
                 }
-
             }
         }
     }
 
-    @Composable
-    private fun AccountDialog(showDialog: MutableState<Boolean>) {
-        Dialog(onDismissRequest = { showDialog.value = false }) {
-            Card(
-                backgroundColor = MaterialTheme.colors.background
+}
+
+@Composable
+private fun DiningTopBar(
+    getDataEnabled: Boolean,
+    showMenu: Boolean,
+    onShowMenu: (Boolean) -> Unit,
+    onShowAccountDialog: () -> Unit,
+    onGetData: () -> Unit,
+) {
+    TopAppBar(
+        title = { Text("UT Dining Widget") },
+        actions = {
+            IconButton(
+                onClick = onGetData,
+                enabled = getDataEnabled
             ) {
-                val usernameState = remember {
-                    mutableStateOf(runBlocking {
-                        withTimeoutOrNull(100) { usernameFlow.firstOrNull() } ?: ""
-                    })
-                }
-                val passwordState = remember { mutableStateOf("") }
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = usernameState.value,
-                        onValueChange = { usernameState.value = it },
-                        label = { Text(stringResource(id = R.string.username)) }
-                    )
-                    OutlinedTextField(
-                        value = passwordState.value,
-                        onValueChange = { passwordState.value = it },
-                        label = { Text(stringResource(id = R.string.password)) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-                    )
-                    Button(
-                        modifier = Modifier.align(alignment = Alignment.End),
-                        onClick = {
-                            saveUsernameAndPassword(
-                                usernameState.value,
-                                passwordState.value
-                            )
-                            showDialog.value = false
-                        }) {
-                        Text(text = stringResource(id = R.string.save))
-                    }
+                Icon(Icons.Default.Refresh, "Refresh")
+            }
+            IconButton(onClick = { onShowMenu(!showMenu) }) {
+                Icon(Icons.Default.MoreVert, null)
+            }
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { onShowMenu(false) }
+            ) {
+                DropdownMenuItem(onClick = {
+                    onShowAccountDialog()
+                    onShowMenu(false)
+                }) {
+                    Text(text = stringResource(id = R.string.set_account))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Icon(Icons.Filled.AccountCircle, null)
                 }
             }
         }
-    }
+    )
+}
 
-    private fun saveUsernameAndPassword(username: String, password: String) =
-        lifecycleScope.launch(Dispatchers.IO) {
-            applicationContext.dataStore.edit {
-                it[USERNAME_KEY] = username
-                it[PASSWORD_KEY] = password
+
+@Composable
+private fun TopSection(
+    username: String,
+    isLoading: Boolean,
+    onShowAccountDialog: () -> Unit,
+    onToggleWebView: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = stringResource(id = R.string.account))
+            Text(text = username.ifEmpty { stringResource(id = R.string.no_account) })
+            if (username.isBlank()) {
+                Button(onClick = onShowAccountDialog) {
+                    Text(text = stringResource(id = R.string.set_account))
+                }
             }
         }
-
-    private val usernameFlow: Flow<String> by lazy {
-        applicationContext.dataStore.data
-            .map { preferences ->
-                preferences[USERNAME_KEY] ?: ""
+        val uriHandler = LocalUriHandler.current
+        Row(Modifier.clickable {
+            uriHandler.openUri("https://github.com/amparhizgar/ut_dining_widget/")
+        }) {
+            Text(text = "Source code available on GitHub")
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(Icons.Outlined.Info, contentDescription = "Info")
+        }
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            AnimatedVisibility(visible = isLoading) {
+                CircularProgressIndicator(Modifier.clickable { onToggleWebView() })
             }
+        }
     }
 }
+
+@Composable
+fun AccountDialog(
+    onDismissRequest: () -> Unit,
+    username: String,
+    onSave: (username: String, pass: String) -> Unit,
+) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            backgroundColor = MaterialTheme.colors.background
+        ) {
+            val usernameState = remember {
+                mutableStateOf(username)
+            }
+            val passwordState = remember { mutableStateOf("") }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = usernameState.value,
+                    onValueChange = { usernameState.value = it },
+                    label = { Text(stringResource(id = R.string.username)) }
+                )
+                OutlinedTextField(
+                    value = passwordState.value,
+                    onValueChange = { passwordState.value = it },
+                    label = { Text(stringResource(id = R.string.password)) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                )
+                Button(
+                    modifier = Modifier.align(alignment = Alignment.End),
+                    onClick = {
+                        onSave(
+                            usernameState.value,
+                            passwordState.value
+                        )
+                        onDismissRequest()
+                    }) {
+                    Text(text = stringResource(id = R.string.save))
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun Day(
@@ -329,7 +320,10 @@ fun FoodItem(
         }
         AnimatedVisibility(visible = showNotReserved) {
             notReserves.forEach {
-                Text(text = "❌ ${it.name}", color = LocalContentColor.current.copy(alpha = 0.4f))
+                Text(
+                    text = "❌ ${it.name}",
+                    color = LocalContentColor.current.copy(alpha = 0.4f)
+                )
             }
         }
     }

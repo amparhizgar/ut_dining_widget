@@ -17,15 +17,17 @@ class ScrapUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(): ListenableWorker.Result {
         kotlin.runCatching {
-            val list1 = withTimeout(60 * 1000) {
-                scrapper.start()
+            withContext(Dispatchers.IO) {
+                val list1 = withTimeout(60 * 1000) {
+                    scrapper.start()
+                }
+                saveResults(list1)
+                val list2 = withTimeout(60 * 1000) {
+                    scrapper.nextWeek = true
+                    scrapper.start()
+                }
+                saveResults(list2)
             }
-            saveResults(list1)
-            val list2 = withTimeout(60 * 1000) {
-                scrapper.nextWeek = true
-                scrapper.start()
-            }
-            saveResults(list2)
         }.onFailure {
             Log.e(TAG, "doWork: Error Occurred", it)
             return ListenableWorker.Result.retry()

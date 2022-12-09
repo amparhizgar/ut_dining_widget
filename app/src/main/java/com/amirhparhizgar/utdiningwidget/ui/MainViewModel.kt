@@ -2,7 +2,9 @@ package com.amirhparhizgar.utdiningwidget.ui
 
 import android.view.View
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.amirhparhizgar.utdiningwidget.data.ReserveDao
@@ -11,6 +13,7 @@ import com.amirhparhizgar.utdiningwidget.data.model.sortBasedOnMeal
 import com.amirhparhizgar.utdiningwidget.usecase.ScrapUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -29,6 +32,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    private val dataStore: DataStore<Preferences>,
     private val db: ReserveDao,
     private val scrapUseCase: ScrapUseCase
 ) : ViewModel() {
@@ -70,6 +74,16 @@ class MainViewModel @Inject constructor(
     val webView: View
         get() = scrapUseCase.scrapper.view
 
+    val usernameFlow: Flow<String> by lazy {
+        dataStore.data
+            .map { preferences ->
+                preferences[USERNAME_KEY] ?: ""
+            }
+    }
+    val haveCredentials = dataStore.data.map {
+        it[USERNAME_KEY].isNullOrEmpty()
+            .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
+    }
     fun getData() {
         viewModelScope.launch {
             loadingState.value = true
@@ -80,4 +94,13 @@ class MainViewModel @Inject constructor(
             showWebView.value = false
         }
     }
+
+    fun saveUsernameAndPassword(username: String, password: String) =
+        viewModelScope.launch(Dispatchers.IO) {
+            dataStore.edit {
+                it[USERNAME_KEY] = username
+                it[PASSWORD_KEY] = password
+            }
+        }
+
 }
