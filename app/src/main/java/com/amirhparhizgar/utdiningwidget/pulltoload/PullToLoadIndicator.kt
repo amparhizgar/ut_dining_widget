@@ -14,9 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.amirhparhizgar.utdiningwidget.PullToLoadState
 import com.amirhparhizgar.utdiningwidget.R
-import com.amirhparhizgar.utdiningwidget.TAG
+import com.amirhparhizgar.utdiningwidget.ui.TAG
 
 /**
  * Created by AmirHossein Parhizgar on 12/8/2022.

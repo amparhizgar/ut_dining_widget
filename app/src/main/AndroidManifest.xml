@@ -16,7 +16,7 @@
         android:theme="@style/Theme.UTDiningWidget"
         tools:replace="android:theme,android:icon,android:roundIcon">
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.UTDiningWidget"
             tools:replace="android:exported">
@@ -40,7 +40,7 @@
         </activity>
 
         <receiver
-            android:name=".UpdateReceiver"
+            android:name=".domain.UpdateWidgetReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -49,7 +49,7 @@
         </receiver>
 
         <receiver
-            android:name=".DiningWidgetReceiver"
+            android:name=".ui.DiningWidgetReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -61,7 +61,7 @@
         </receiver>
 
         <service
-            android:name=".ScrapJobService"
+            android:name=".domain.ScrapJobService"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />

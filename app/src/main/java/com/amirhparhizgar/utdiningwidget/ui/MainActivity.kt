@@ -1,9 +1,8 @@
-package com.amirhparhizgar.utdiningwidget
+package com.amirhparhizgar.utdiningwidget.ui
 
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -20,14 +19,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.datastore.core.DataStore
@@ -37,21 +37,22 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
-import androidx.work.*
-import androidx.work.Constraints
-import com.amirhparhizgar.utdiningwidget.data.getDBInstance
+import com.amirhparhizgar.utdiningwidget.R
+import com.amirhparhizgar.utdiningwidget.domain.UpdateWidgetReceiver
+import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
+import com.amirhparhizgar.utdiningwidget.pulltoload.pullToLoad
 import com.amirhparhizgar.utdiningwidget.pulltoload.PullToLoadIndicator
+import com.amirhparhizgar.utdiningwidget.pulltoload.rememberPullToLoadState
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
-import com.amirhparhizgar.utdiningwidget.worker.MainViewModel
-import com.amirhparhizgar.utdiningwidget.worker.ScrapWorker
-import com.amirhparhizgar.utdiningwidget.worker.ScrapWorkerImpl
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import saman.zamani.persiandate.PersianDate
 import saman.zamani.persiandate.PersianDateFormat
-import java.util.concurrent.TimeUnit
 
 const val TAG = "amir"
 
@@ -61,7 +62,7 @@ val PASSWORD_KEY = stringPreferencesKey("password")
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    val viewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
 //            enqueueScrapWork()
             scheduleForNearestWeekendIfNotScheduled()
 
-            UpdateReceiver.schedule(applicationContext)
+            UpdateWidgetReceiver.schedule(applicationContext)
             DiningWidget().updateAll(applicationContext)
         }
 
@@ -79,7 +80,6 @@ class MainActivity : ComponentActivity() {
             it[USERNAME_KEY].isNullOrEmpty()
                 .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
         }
-        val scrapWorker = ScrapWorkerImpl(applicationContext)
 
         setContent {
             UTDiningWidgetTheme {
@@ -110,50 +110,33 @@ class MainActivity : ComponentActivity() {
                                 Text(text = stringResource(id = R.string.set_account))
                             }
                         }
-                        val showWebView = remember { mutableStateOf(false) }
-
                         Row(
                             modifier = Modifier.padding(vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val loadingState = remember {
-                                mutableStateOf(false)
-                            }
+
                             Spacer(modifier = Modifier.weight(1f))
-                            if (loadingState.value)
+                            if (viewModel.loadingState.value)
                                 CircularProgressIndicator(Modifier.clickable {
-                                    showWebView.value = showWebView.value.not()
+                                    viewModel.showWebView.value = viewModel.showWebView.value.not()
                                 })
                             val haveCredentialsState =
                                 haveCredentials.collectAsState(initial = false)
                             val getDataEnabled =
-                                haveCredentialsState.value.and(loadingState.value.not())
-                            val context = LocalContext.current
+                                haveCredentialsState.value.and(viewModel.loadingState.value.not())
                             Button(onClick = {
                                 lifecycleScope.launch {
-                                    loadingState.value = true
-                                    kotlin.runCatching {
-                                        withTimeout(2 * 60000) {
-                                            scrapWorker.doWork()
-                                        }
-                                    }.onFailure {
-                                        Toast.makeText(
-                                            context,
-                                            R.string.get_data_failed,
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                    loadingState.value = false
-                                    showWebView.value = false
+                                    viewModel.loadingState.value = true
+                                    viewModel.getData()
                                 }
                             }, enabled = getDataEnabled) {
                                 Text(text = stringResource(id = R.string.get_data_now))
                             }
                         }
-                        if (showWebView.value)
+                        if (viewModel.showWebView.value)
                             AndroidView(modifier = Modifier.height(600.dp), factory = {
-                                scrapWorker.scrapper.view
+                                viewModel.webView
                             })
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                             val loading = remember { mutableStateOf(false) }
@@ -284,22 +267,6 @@ class MainActivity : ComponentActivity() {
             .map { preferences ->
                 preferences[USERNAME_KEY] ?: ""
             }
-    }
-
-    private fun enqueueScrapWork() {
-        val constraints = Constraints.Builder()
-            .setRequiresCharging(true)
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val workRequest =
-            PeriodicWorkRequestBuilder<ScrapWorker>(1, TimeUnit.DAYS)
-                .setConstraints(constraints)
-                .build()
-        val workManager = WorkManager.getInstance(this)
-        workManager.enqueueUniquePeriodicWork(
-            "scrap",
-            ExistingPeriodicWorkPolicy.KEEP, workRequest
-        )
     }
 }
 

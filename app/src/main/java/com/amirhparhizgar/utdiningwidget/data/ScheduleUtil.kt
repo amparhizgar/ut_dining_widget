@@ -6,7 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.icu.util.Calendar
 import androidx.activity.ComponentActivity
-import com.amirhparhizgar.utdiningwidget.ScrapJobService
+import com.amirhparhizgar.utdiningwidget.domain.ScrapJobService
 
 /**
  * Created by AmirHossein Parhizgar on 12/8/2022.

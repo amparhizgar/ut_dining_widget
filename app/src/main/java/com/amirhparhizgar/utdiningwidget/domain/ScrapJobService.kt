@@ -1,11 +1,13 @@
-package com.amirhparhizgar.utdiningwidget
+package com.amirhparhizgar.utdiningwidget.domain
 
 import android.app.job.JobParameters
 import android.app.job.JobService
 import android.util.Log
 import androidx.work.Configuration
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
+import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
+import com.amirhparhizgar.utdiningwidget.ui.TAG
 import kotlinx.coroutines.*
 
 class ScrapJobService : JobService() {

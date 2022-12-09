@@ -1,4 +1,4 @@
-package com.amirhparhizgar.utdiningwidget
+package com.amirhparhizgar.utdiningwidget.ui
 
 import android.content.Context
 import android.content.Intent
@@ -24,6 +24,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
+import com.amirhparhizgar.utdiningwidget.data.model.sortBasedOnMeal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import saman.zamani.persiandate.PersianDate
@@ -63,7 +64,7 @@ class DiningWidget : GlanceAppWidget() {
         )
     }
 
-    val callback = actionRunCallback<WidgetClickAction>(
+    private val callback = actionRunCallback<WidgetClickAction>(
         parameters = actionParametersOf()
     )
 

@@ -1,4 +1,4 @@
-package com.amirhparhizgar.utdiningwidget
+package com.amirhparhizgar.utdiningwidget.domain
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -7,11 +7,15 @@ import android.view.View
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
+import com.amirhparhizgar.utdiningwidget.ui.*
 import com.daandtu.webscraper.WebScraper
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.jsoup.Jsoup
+import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -22,8 +26,8 @@ class Group(val id: String, val name: String)
 class Restaurant(val id: String, val name: String)
 
 @SuppressLint("SetJavaScriptEnabled")
-class DiningScrapper(
-    context: Context
+class DiningScrapper @Inject constructor(
+    @ApplicationContext context: Context
 ) : WebScraper(context) {
     var nextWeek: Boolean = false
     private lateinit var username: String
@@ -239,7 +243,7 @@ class DiningScrapper(
 
     private suspend fun doAndAwaitLoad(runnable: () -> Unit) {
         withContext(Dispatchers.Main) {
-            suspendCoroutine<Unit> {
+            suspendCoroutine {
                 onPageLoadedListener = {
                     it.resume(Unit)
                 }

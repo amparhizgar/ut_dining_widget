@@ -1,7 +1,7 @@
 package com.amirhparhizgar.utdiningwidget.data
 
 import androidx.room.*
-import com.amirhparhizgar.utdiningwidget.ReserveRecord
+import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import kotlinx.coroutines.flow.Flow
 
 @Dao

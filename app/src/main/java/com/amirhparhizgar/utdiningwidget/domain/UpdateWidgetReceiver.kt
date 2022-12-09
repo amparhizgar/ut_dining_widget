@@ -1,4 +1,4 @@
-package com.amirhparhizgar.utdiningwidget
+package com.amirhparhizgar.utdiningwidget.domain
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -6,18 +6,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Context.ALARM_SERVICE
 import android.content.Intent
-import android.icu.util.Calendar
 import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
-import androidx.core.app.AlarmManagerCompat
 import androidx.glance.appwidget.updateAll
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
+import com.amirhparhizgar.utdiningwidget.ui.DiningWidget
+import com.amirhparhizgar.utdiningwidget.ui.TAG
 import kotlinx.coroutines.runBlocking
 import saman.zamani.persiandate.PersianDate
-import java.util.*
 
-class UpdateReceiver : BroadcastReceiver() {
+class UpdateWidgetReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_ALARM_UPDATE_WIDGET = "ACTION_ALARM_UPDATE_WIDGET"
 
@@ -28,7 +26,7 @@ class UpdateReceiver : BroadcastReceiver() {
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
                 123,
-                Intent(context, UpdateReceiver::class.java).apply {
+                Intent(context, UpdateWidgetReceiver::class.java).apply {
                     action = ACTION_ALARM_UPDATE_WIDGET
                 },
                 flag

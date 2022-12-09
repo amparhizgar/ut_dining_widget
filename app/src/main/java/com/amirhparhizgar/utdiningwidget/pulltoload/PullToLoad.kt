@@ -1,4 +1,4 @@
-package com.amirhparhizgar.utdiningwidget
+package com.amirhparhizgar.utdiningwidget.pulltoload
 
 import android.util.Log
 import androidx.compose.animation.core.animate
@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.inspectable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import com.amirhparhizgar.utdiningwidget.ui.TAG
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs

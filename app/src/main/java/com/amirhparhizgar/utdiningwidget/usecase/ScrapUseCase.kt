@@ -1,34 +1,21 @@
-package com.amirhparhizgar.utdiningwidget.worker
+package com.amirhparhizgar.utdiningwidget.usecase
 
-import android.content.Context
 import android.util.Log
-import androidx.work.CoroutineWorker
 import androidx.work.ListenableWorker
-import androidx.work.WorkerParameters
-import com.amirhparhizgar.utdiningwidget.DiningScrapper
-import com.amirhparhizgar.utdiningwidget.ReserveRecord
-import com.amirhparhizgar.utdiningwidget.TAG
-import com.amirhparhizgar.utdiningwidget.data.getDBInstance
+import com.amirhparhizgar.utdiningwidget.domain.DiningScrapper
+import com.amirhparhizgar.utdiningwidget.data.ReserveDao
+import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
+import com.amirhparhizgar.utdiningwidget.ui.TAG
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import javax.inject.Inject
 
-class ScrapWorker(
-    context: Context,
-    params: WorkerParameters
-) : CoroutineWorker(context, params) {
-
-    override suspend fun doWork(): Result {
-        return ScrapWorkerImpl(applicationContext).doWork()
-    }
-
-}
-
-class ScrapWorkerImpl(applicationContext: Context) {
-
-    val scrapper = DiningScrapper(applicationContext)
-
-    suspend fun doWork(): ListenableWorker.Result {
+class ScrapUseCase @Inject constructor(
+    val scrapper: DiningScrapper,
+    private val db: ReserveDao,
+) {
+    suspend operator fun invoke(): ListenableWorker.Result {
         kotlin.runCatching {
             val list1 = withTimeout(60 * 1000) {
                 scrapper.start()
@@ -45,8 +32,6 @@ class ScrapWorkerImpl(applicationContext: Context) {
         }
         return ListenableWorker.Result.success()
     }
-
-    private val db = getDBInstance(applicationContext).dao()
 
     private suspend fun saveResults(list: List<ReserveRecord>) {
         withContext(Dispatchers.IO) {

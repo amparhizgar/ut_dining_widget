@@ -1,7 +1,6 @@
-package com.amirhparhizgar.utdiningwidget
+package com.amirhparhizgar.utdiningwidget.data.model
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 @Entity(primaryKeys = ["date", "meal", "group", "restaurant", "name"])
 data class ReserveRecord(
