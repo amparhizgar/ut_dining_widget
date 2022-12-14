@@ -36,6 +36,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.amirhparhizgar.utdiningwidget.BuildConfig
 import com.amirhparhizgar.utdiningwidget.R
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
@@ -218,7 +219,7 @@ private fun TopSection(
         Row(Modifier.clickable {
             uriHandler.openUri("https://github.com/amparhizgar/ut_dining_widget/")
         }) {
-            Text(text = "Source code available on GitHub")
+            Text(text = "V${BuildConfig.VERSION_NAME} Source code available on GitHub")
             Spacer(modifier = Modifier.width(4.dp))
             Icon(Icons.Outlined.Info, contentDescription = "Info")
         }
