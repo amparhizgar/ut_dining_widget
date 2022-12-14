@@ -33,7 +33,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.amirhparhizgar.utdiningwidget.R
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
@@ -41,6 +43,7 @@ import com.amirhparhizgar.utdiningwidget.domain.UpdateWidgetReceiver
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -60,7 +63,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity->onCreate: UT Dining Widget is up")
         lifecycleScope.launch(Dispatchers.Default) {
-//            enqueueScrapWork()
             scheduleForNearestWeekendIfNotScheduled()
 
             UpdateWidgetReceiver.schedule(applicationContext)
@@ -92,6 +94,20 @@ class MainActivity : ComponentActivity() {
 
                     val haveCredentialsState =
                         viewModel.haveCredentials.collectAsState(initial = false)
+                    val scaffoldState = rememberScaffoldState()
+
+                    LaunchedEffect(Unit) {
+                        viewModel.showMessageEvent.collectLatest { event->
+                            val message = when(event) {
+                                MainViewModel.MessageEvent.NoConnection -> "No Connection"
+                                MainViewModel.MessageEvent.UnknownError -> "Unknown Error Occurred"
+                            }
+                            scaffoldState.snackbarHostState.showSnackbar(
+                                message = message,
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
 
                     val getDataEnabled = remember {
                         derivedStateOf {
@@ -99,7 +115,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Scaffold(topBar = {
+                    Scaffold(scaffoldState = scaffoldState, topBar = {
                         DiningTopBar(
                             getDataEnabled.value,
                             showMenu,

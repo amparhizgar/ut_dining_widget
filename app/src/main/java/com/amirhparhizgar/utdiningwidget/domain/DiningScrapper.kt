@@ -4,9 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import android.view.View
-import android.webkit.WebResourceResponse
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
@@ -21,7 +19,9 @@ import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import javax.inject.Inject
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+
 
 const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
@@ -38,6 +38,7 @@ class DiningScrapper @Inject constructor(
     private lateinit var username: String
     private lateinit var password: String
     private var onPageLoadedListener: (() -> Unit)? = null
+    private var onErrorListener: ((error: WebResourceError) -> Unit)? = null
 
     private val theList = mutableListOf<ReserveRecord>()
 
@@ -68,6 +69,14 @@ class DiningScrapper @Inject constructor(
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
                 )
                 webView.layout(0, 0, webView.measuredWidth, webView.measuredHeight)
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError
+            ) {
+                onErrorListener?.invoke(error)
             }
         }
 
@@ -251,8 +260,21 @@ class DiningScrapper @Inject constructor(
                 onPageLoadedListener = {
                     it.resume(Unit)
                 }
+                onErrorListener = { error ->
+                    onPageLoadedListener =
+                        null // Otherwise it will throw "It's already resumed" exception
+                    it.resumeWithException(
+                        WebResourceException(
+                            error.description.toString(),
+                            error.errorCode
+                        )
+                    )
+                }
                 runnable()
             }
         }
     }
 }
+
+@Suppress("unused")
+class WebResourceException(message: String, val code: Int) : Exception(message)

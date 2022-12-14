@@ -10,10 +10,12 @@ import androidx.lifecycle.viewModelScope
 import com.amirhparhizgar.utdiningwidget.data.ReserveDao
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.model.sortBasedOnMeal
+import com.amirhparhizgar.utdiningwidget.domain.WebResourceException
 import com.amirhparhizgar.utdiningwidget.usecase.ScrapUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -21,11 +23,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import saman.zamani.persiandate.PersianDate
 import javax.inject.Inject
-
-/**
- * Created by AmirHossein Parhizgar on 12/9/2022.
- */
-
 
 /**
  * Created by AmirHossein Parhizgar on 12/8/2022.
@@ -66,7 +63,14 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
     val showWebView = mutableStateOf(false)
+
+    val showMessageEvent = MutableSharedFlow<MessageEvent>()
+
+    enum class MessageEvent {
+        NoConnection, UnknownError;
+    }
 
     val loadingState =
         mutableStateOf(false)
@@ -80,16 +84,25 @@ class MainViewModel @Inject constructor(
                 preferences[USERNAME_KEY] ?: ""
             }
     }
+
     val haveCredentials = dataStore.data.map {
         it[USERNAME_KEY].isNullOrEmpty()
             .or(it[PASSWORD_KEY].isNullOrEmpty()).not()
     }
+
     fun getData() {
         viewModelScope.launch {
             loadingState.value = true
-            withTimeout(2 * 60000) {
+            val result = withTimeout(2 * 60_000) {
                 scrapUseCase()
             }
+            if (result.isFailure)
+                when (result.exceptionOrNull()) {
+                    is WebResourceException ->
+                        showMessageEvent.emit(MessageEvent.NoConnection)
+                    else ->
+                        showMessageEvent.emit(MessageEvent.UnknownError)
+                }
             loadingState.value = false
             showWebView.value = false
         }

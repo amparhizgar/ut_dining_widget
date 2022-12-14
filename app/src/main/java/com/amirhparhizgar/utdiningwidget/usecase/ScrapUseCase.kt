@@ -1,10 +1,9 @@
 package com.amirhparhizgar.utdiningwidget.usecase
 
 import android.util.Log
-import androidx.work.ListenableWorker
-import com.amirhparhizgar.utdiningwidget.domain.DiningScrapper
 import com.amirhparhizgar.utdiningwidget.data.ReserveDao
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
+import com.amirhparhizgar.utdiningwidget.domain.DiningScrapper
 import com.amirhparhizgar.utdiningwidget.ui.TAG
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,8 +14,8 @@ class ScrapUseCase @Inject constructor(
     val scrapper: DiningScrapper,
     private val db: ReserveDao,
 ) {
-    suspend operator fun invoke(): ListenableWorker.Result {
-        kotlin.runCatching {
+    suspend operator fun invoke(): Result<Boolean> {
+        return runCatching {
             withContext(Dispatchers.IO) {
                 val list1 = withTimeout(60 * 1000) {
                     scrapper.start()
@@ -27,12 +26,11 @@ class ScrapUseCase @Inject constructor(
                     scrapper.start()
                 }
                 saveResults(list2)
+                true
             }
         }.onFailure {
             Log.e(TAG, "doWork: Error Occurred", it)
-            return ListenableWorker.Result.retry()
         }
-        return ListenableWorker.Result.success()
     }
 
     private suspend fun saveResults(list: List<ReserveRecord>) {
