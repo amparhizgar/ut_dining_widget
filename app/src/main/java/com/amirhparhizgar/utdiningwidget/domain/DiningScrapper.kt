@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.jsoup.Jsoup
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -86,15 +87,15 @@ class DiningScrapper @Inject constructor(
     }
 
     suspend fun start(): List<ReserveRecord> {
-        withContext(Dispatchers.Main) {
-            clearAll()
-        }
-        login()
+        theList.removeAll { true }
         loadReserve()
         return theList
     }
 
-    private suspend fun login() {
+    suspend fun login() {
+        withContext(Dispatchers.Main) {
+            clearAll()
+        }
         dataStore.data.map {
             username = it[USERNAME_KEY] ?: ""
             password = it[PASSWORD_KEY] ?: ""
@@ -166,8 +167,6 @@ class DiningScrapper @Inject constructor(
     }
 
     private suspend fun extract(group: Group, restaurant: Restaurant) {
-        Log.d(TAG, "delay extract")
-        waitForSpinner()
         // extract table
         val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
         while (Jsoup.parse(getHtmlInMain()).selectXpath(masterDivXpath).size == 0) {
@@ -225,22 +224,23 @@ class DiningScrapper @Inject constructor(
     }
 
     private suspend fun waitForSpinner() {
-        var n = 0
+        var foundVisible = false
+        val startTime = System.currentTimeMillis()
         while (true) {
             val spinner = Jsoup.parse(getHtmlInMain()).getElementById("ajaxLoader")!!
-            val isVisible = spinner.attr("style")
-                .contains("grid") // when there is 'grid' it's shown and when it's 'none' it's invisible
+            val style = spinner.attr("style")
+//            Log.d(TAG, "DiningScrapper->waitForSpinner: $style")
+            val isVisible =
+                style.contains("none").not() // when there is 'grid or block' it's shown and when it's 'none' it's invisible
+            foundVisible = foundVisible || isVisible
             Log.d(TAG, "DiningScrapper->waitForSpinner: spinner is visible: $isVisible")
-            if (!isVisible) {
-                if (n == 0)
-                    delay(200)
-                else {
-                    delay(200)
-                    break
-                }
-            }
-            n++
-            delay(100)
+            if (!isVisible && foundVisible) {
+                delay(100)
+                break
+            } else if (!isVisible && System.currentTimeMillis() - startTime > 4_000)
+                break
+            else if (foundVisible)
+                delay(200)
         }
     }
 

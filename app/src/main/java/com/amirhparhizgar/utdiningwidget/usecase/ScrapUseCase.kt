@@ -17,6 +17,9 @@ class ScrapUseCase @Inject constructor(
     suspend operator fun invoke(): Result<Boolean> {
         return runCatching {
             withContext(Dispatchers.IO) {
+                withTimeout(20 * 1000) {
+                    scrapper.login()
+                }
                 val list1 = withTimeout(60 * 1000) {
                     scrapper.start()
                 }
