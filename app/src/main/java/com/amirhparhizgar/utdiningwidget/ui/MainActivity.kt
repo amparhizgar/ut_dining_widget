@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.showMessageEvent.collectLatest { event->
                             val message = when(event) {
                                 MainViewModel.MessageEvent.NoConnection -> "No Connection"
+                                MainViewModel.MessageEvent.TimeOutError -> "Took too long! try again"
                                 MainViewModel.MessageEvent.UnknownError -> "Unknown Error Occurred"
                             }
                             scaffoldState.snackbarHostState.showSnackbar(

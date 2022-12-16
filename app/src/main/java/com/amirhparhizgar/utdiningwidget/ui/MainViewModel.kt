@@ -13,14 +13,11 @@ import com.amirhparhizgar.utdiningwidget.data.model.sortBasedOnMeal
 import com.amirhparhizgar.utdiningwidget.domain.WebResourceException
 import com.amirhparhizgar.utdiningwidget.usecase.ScrapUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import saman.zamani.persiandate.PersianDate
 import javax.inject.Inject
 
@@ -69,7 +66,7 @@ class MainViewModel @Inject constructor(
     val showMessageEvent = MutableSharedFlow<MessageEvent>()
 
     enum class MessageEvent {
-        NoConnection, UnknownError;
+        NoConnection, TimeOutError, UnknownError;
     }
 
     val loadingState =
@@ -100,6 +97,8 @@ class MainViewModel @Inject constructor(
                 when (result.exceptionOrNull()) {
                     is WebResourceException ->
                         showMessageEvent.emit(MessageEvent.NoConnection)
+                    is TimeoutCancellationException ->
+                        showMessageEvent.emit(MessageEvent.TimeOutError)
                     else ->
                         showMessageEvent.emit(MessageEvent.UnknownError)
                 }

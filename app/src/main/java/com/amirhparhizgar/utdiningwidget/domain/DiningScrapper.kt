@@ -16,8 +16,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import org.jsoup.Jsoup
+import saman.zamani.persiandate.PersianDate
+import java.util.Calendar
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -27,8 +28,8 @@ import kotlin.coroutines.suspendCoroutine
 const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
 
-class Group(val id: String, val name: String)
-class Restaurant(val id: String, val name: String)
+data class Group(val id: String, val name: String)
+data class Restaurant(val id: String, val name: String)
 
 @SuppressLint("SetJavaScriptEnabled")
 class DiningScrapper @Inject constructor(
@@ -123,13 +124,18 @@ class DiningScrapper @Inject constructor(
 
         groups.forEachIndexed { i, group ->
             if (i > 0)
-                setGroup(group)
+                setGroupAndWait(group)
             extractGroup(group, i == 0)
         }
     }
 
-    private suspend fun setGroup(group: Group) {
-        Log.d(TAG, "DiningScrapper->nextGroup: selecting group $group")
+    private suspend fun setGroupAndWait(group: Group) {
+        Log.d(TAG, "DiningScrapper->nextGroup: selecting group ${group.name}")
+
+        val xPath = "//*[@id=\"Restaurant\"]"
+        val firstId =
+            Jsoup.parse(getHtmlInMain()).selectXpath(xPath).first()!!.children()[0].attr("value")
+
         webView.evaluateJavascript(
             "element692 = " +
                     "document.getElementById(\"$PERSON_GROUP_ID\");" +
@@ -138,11 +144,20 @@ class DiningScrapper @Inject constructor(
         webView.evaluateJavascript(
             "getRest(false);"
         )
-        Log.d(TAG, "delay 3")
-        waitForSpinner()
+
+        while (true) {
+            val selectElement = Jsoup.parse(getHtmlInMain()).selectXpath(xPath)
+            val newFirstId = selectElement.first()!!.children()[0].attr("value")
+            if (newFirstId != firstId)
+                break
+            else
+                delay(200)
+        }
     }
 
+
     private suspend fun extractGroup(group: Group, isFirstGroup: Boolean) {
+        Log.d(TAG, "DiningScrapper->extractGroup: ${group.name}")
         val restaurantSelect = Jsoup.parse(getHtmlInMain()).getElementById(RESTAURANT)
         val restaurants = restaurantSelect?.children()?.map {
             Restaurant(it.attr("value"), it.ownText())
@@ -151,9 +166,14 @@ class DiningScrapper @Inject constructor(
         restaurants.forEach { restaurant ->
             if (isFirstGroup) {
                 setRestaurant(restaurant)
-                if (nextWeek)
+                if (nextWeek) {
+                    val currentWeek = getLoadedDateOrCurrent()
                     goNextWeek()
+                    waitForWeek(currentWeek.apply { addDay(7) })
+                }
             }
+            Log.d(TAG, "DiningScrapper: want to extract restaurant ${restaurant.name}")
+            waitForRestaurant(restaurant)
             extract(group, restaurant)
         }
     }
@@ -162,8 +182,6 @@ class DiningScrapper @Inject constructor(
         withContext(Dispatchers.Main) {
             findElementById("NextWeek").click()
         }
-        Log.d(TAG, "delay next week")
-        waitForSpinner()
     }
 
     private suspend fun extract(group: Group, restaurant: Restaurant) {
@@ -208,7 +226,6 @@ class DiningScrapper @Inject constructor(
         webView.evaluateJavascript(
             "getReservePage();"
         )
-        waitForSpinner()
     }
 
     private suspend fun WebView.evaluateJavascript(script: String) {
@@ -223,23 +240,48 @@ class DiningScrapper @Inject constructor(
         }
     }
 
-    private suspend fun waitForSpinner() {
-        var foundVisible = false
-        val startTime = System.currentTimeMillis()
+    private suspend fun waitForRestaurant(restaurant: Restaurant) {
+        val xPath = "//*[@id=\"myTabContent6\"]/div[2]/div[2]/div[2]/span[1]"
         while (true) {
-            val spinner = Jsoup.parse(getHtmlInMain()).getElementById("ajaxLoader")!!
-            val style = spinner.attr("style")
-//            Log.d(TAG, "DiningScrapper->waitForSpinner: $style")
-            val isVisible =
-                style.contains("none").not() // when there is 'grid or block' it's shown and when it's 'none' it's invisible
-            foundVisible = foundVisible || isVisible
-            Log.d(TAG, "DiningScrapper->waitForSpinner: spinner is visible: $isVisible")
-            if (!isVisible && foundVisible) {
-                delay(100)
+            val span = Jsoup.parse(getHtmlInMain()).selectXpath(xPath)
+            val text = span.text()
+            val isLoaded =
+                text.contains(restaurant.name)
+            Log.d(TAG, "DiningScrapper->waitForRestaurant ($isLoaded) ${restaurant.name} VS $text")
+            if (isLoaded)
                 break
-            } else if (!isVisible && System.currentTimeMillis() - startTime > 4_000)
+            else
+                delay(200)
+        }
+    }
+
+    private suspend fun getLoadedDateOrCurrent(): PersianDate {
+        return runCatching {
+            val saturdayXPath = "//*[@id=\"TopDateDiv\"]/div[2]"
+            val saturday = Jsoup.parse(getHtmlInMain()).selectXpath(saturdayXPath)
+            val indexOfSlash = saturday.text().indexOf('/')
+            saturday.text().substring(indexOfSlash - 4, indexOfSlash + 6).toJalali()
+        }.getOrDefault(PersianDate().apply {
+            val dayOfWeek = (dayOfWeek() - Calendar.SATURDAY + 7) % 7
+            addDay(-dayOfWeek.toLong())
+        })
+    }
+
+    private suspend fun waitForWeek(weekSaturday: PersianDate) {
+        Log.d(TAG, "DiningScrapper->waitForWeek: $weekSaturday")
+        while (true) {
+            val isLoaded = runCatching {
+                val saturdayXPath = "//*[@id=\"TopDateDiv\"]/div[2]"
+                val saturday = Jsoup.parse(getHtmlInMain()).selectXpath(saturdayXPath).text()
+                val indexOfSlash = saturday.indexOf('/')
+                val loadedSaturday =
+                    saturday.substring(indexOfSlash - 4, indexOfSlash + 6).toJalali()
+                Log.d(TAG, "DiningScrapper->waitForWeek: loadedWeek = $loadedSaturday")
+                weekSaturday.toLongFormat() == loadedSaturday.toLongFormat()
+            }.getOrDefault(false)
+            if (isLoaded)
                 break
-            else if (foundVisible)
+            else
                 delay(200)
         }
     }
