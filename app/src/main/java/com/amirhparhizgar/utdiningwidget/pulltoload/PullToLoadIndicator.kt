@@ -29,7 +29,6 @@ fun PullToLoadIndicator(
     backgroundColor: Color = MaterialTheme.colors.surface,
     contentColor: Color = contentColorFor(backgroundColor)
 ) {
-    Log.d(TAG, "loading->PullToLoadIndicator: loading=$loading, height = ${state.height.dp}")
     Crossfade(
         targetState = loading,
         animationSpec = tween(durationMillis = CrossfadeDurationMs)

@@ -180,7 +180,7 @@ class DiningScrapper @Inject constructor(
 
     private suspend fun goNextWeek() {
         withContext(Dispatchers.Main) {
-            findElementById("NextWeek").click()
+            webView.evaluateJavascript("getNextWeek();")
         }
     }
 
@@ -282,7 +282,7 @@ class DiningScrapper @Inject constructor(
             if (isLoaded)
                 break
             else
-                delay(200)
+                delay(500)
         }
     }
 

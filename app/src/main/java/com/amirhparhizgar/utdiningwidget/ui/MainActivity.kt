@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
                             )
 
                             if (viewModel.showWebView.value)
-                                AndroidView(modifier = Modifier.height(600.dp), factory = {
+                                AndroidView(modifier = Modifier.fillMaxHeight(), factory = {
                                     viewModel.webView
                                 })
 
