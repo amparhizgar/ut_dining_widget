@@ -98,8 +98,8 @@ class MainActivity : ComponentActivity() {
                     val scaffoldState = rememberScaffoldState()
 
                     LaunchedEffect(Unit) {
-                        viewModel.showMessageEvent.collectLatest { event->
-                            val message = when(event) {
+                        viewModel.showMessageEvent.collectLatest { event ->
+                            val message = when (event) {
                                 MainViewModel.MessageEvent.NoConnection -> "No Connection"
                                 MainViewModel.MessageEvent.TimeOutError -> "Took too long! try again"
                                 MainViewModel.MessageEvent.UnknownError -> "Unknown Error Occurred"
@@ -293,7 +293,9 @@ fun Day(
             .fillMaxWidth(1f), elevation = 2.dp, shape = RoundedCornerShape(16.dp)
     ) {
         Column(Modifier.padding(8.dp)) {
-            Row {
+            Row(Modifier.clickable(enabled = showButton) {
+                onSetShowNotReserved(showNotReserved.not())
+            }) {
                 Text(text = date.dayName(), color = MaterialTheme.colors.secondary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = PersianDateFormat("j F").format(date))
@@ -303,9 +305,6 @@ fun Day(
                     Icon(
                         modifier = Modifier
                             .padding(0.dp)
-                            .clickable {
-                                onSetShowNotReserved(showNotReserved.not())
-                            }
                             .rotate(rotationState.value),
                         painter = painterResource(id = R.drawable.ic_baseline_expand_more_24),
                         contentDescription = "show not reserved"

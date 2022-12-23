@@ -21,6 +21,7 @@ class ScrapUseCase @Inject constructor(
                     scrapper.login()
                 }
                 val list1 = withTimeout(60 * 1000) {
+                    scrapper.nextWeek = false
                     scrapper.start()
                 }
                 saveResults(list1)

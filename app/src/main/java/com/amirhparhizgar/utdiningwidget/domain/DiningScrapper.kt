@@ -133,9 +133,16 @@ class DiningScrapper @Inject constructor(
         Log.d(TAG, "DiningScrapper->nextGroup: selecting group ${group.name}")
 
         val xPath = "//*[@id=\"Restaurant\"]"
-        val firstId =
-            Jsoup.parse(getHtmlInMain()).selectXpath(xPath).first()!!.children()[0].attr("value")
-
+        var firstId = ""
+        while (true) {
+            try {
+                firstId = Jsoup.parse(getHtmlInMain()).selectXpath(xPath).first()!!
+                    .children()[0].attr("value")
+                break
+            } catch (e: Exception){
+                delay(200)
+            }
+        }
         webView.evaluateJavascript(
             "element692 = " +
                     "document.getElementById(\"$PERSON_GROUP_ID\");" +
