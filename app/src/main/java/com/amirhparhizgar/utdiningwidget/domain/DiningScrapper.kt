@@ -7,25 +7,26 @@ import android.view.View
 import android.webkit.*
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.amirhparhizgar.utdiningwidget.Bridge
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
+import com.amirhparhizgar.utdiningwidget.getNextWeek2FuncDef
+import com.amirhparhizgar.utdiningwidget.getReservePage2FuncDef
+import com.amirhparhizgar.utdiningwidget.getRest2FuncDef
 import com.amirhparhizgar.utdiningwidget.ui.*
 import com.daandtu.webscraper.WebScraper
+import com.google.gson.JsonParser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
-import saman.zamani.persiandate.PersianDate
-import java.util.Calendar
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 
-const val RESTAURANT = "Restaurant"
 const val PERSON_GROUP_ID = "PersonGroup"
 
 data class Group(val id: String, val name: String)
@@ -41,6 +42,7 @@ class DiningScrapper @Inject constructor(
     private lateinit var password: String
     private var onPageLoadedListener: (() -> Unit)? = null
     private var onErrorListener: ((error: WebResourceError) -> Unit)? = null
+    private val bridge = Bridge()
 
     private val theList = mutableListOf<ReserveRecord>()
 
@@ -116,88 +118,73 @@ class DiningScrapper @Inject constructor(
     }
 
     private suspend fun loadReserve() {
+        withContext(Dispatchers.Main) {
+            webView.addJavascriptInterface(bridge, "bridge")
+        }
+
         loadURLAndWait("https://dining2.ut.ac.ir/Reserves")
-        val personGroup = Jsoup.parse(getHtmlInMain()).getElementById(PERSON_GROUP_ID)
-        val groups = personGroup?.children()?.map {
-            Group(it.attr("value"), it.ownText())
-        }?.filter { it.id != "0" } ?: return
+        var groups: List<Group>? = null
+        while (groups == null) {
+            val personGroup = Jsoup.parse(getHtmlInMain()).getElementById(PERSON_GROUP_ID)
+            groups = personGroup?.children()?.map {
+                Group(it.attr("value"), it.ownText())
+            }?.filter { it.id != "0" }
+        }
+
+        webView.evaluateJavascriptSuspend(getRest2FuncDef)
+        webView.evaluateJavascriptSuspend(getReservePage2FuncDef)
+        webView.evaluateJavascriptSuspend(getNextWeek2FuncDef)
 
         groups.forEachIndexed { i, group ->
-            if (i > 0)
-                setGroupAndWait(group)
             extractGroup(group, i == 0)
         }
     }
 
-    private suspend fun setGroupAndWait(group: Group) {
-        Log.d(TAG, "DiningScrapper->nextGroup: selecting group ${group.name}")
-
-        val xPath = "//*[@id=\"Restaurant\"]"
-        var firstId = ""
-        while (true) {
-            try {
-                firstId = Jsoup.parse(getHtmlInMain()).selectXpath(xPath).first()!!
-                    .children()[0].attr("value")
-                break
-            } catch (e: Exception){
-                delay(200)
+    private suspend fun extractGroup(group: Group, isFirstGroup: Boolean) {
+        val restaurantsJson = withContext(Dispatchers.Main) {
+            suspendCoroutine { cont ->
+                bridge.listener = {
+                    cont.resume(it)
+                }
+                webView.evaluateJavascript("getRest2(${group.id});", null)
             }
         }
-        webView.evaluateJavascript(
-            "element692 = " +
-                    "document.getElementById(\"$PERSON_GROUP_ID\");" +
-                    " element692.value = \"${group.id}\";"
-        )
-        webView.evaluateJavascript(
-            "getRest(false);"
-        )
-
-        while (true) {
-            val selectElement = Jsoup.parse(getHtmlInMain()).selectXpath(xPath)
-            val newFirstId = selectElement.first()!!.children()[0].attr("value")
-            if (newFirstId != firstId)
-                break
-            else
-                delay(200)
+        val restaurants = mutableListOf<Restaurant>()
+        Log.d(TAG, "DiningScrapper->loadReserve: res=$restaurants")
+        //        [{"id":30,"value":"دانشکده-سلف فنی1-16 آذر -برادران-کارکنان-برادران","value2":null,"HasError":false}]
+        val json = JsonParser.parseString(restaurantsJson)
+        json.asJsonArray.forEach {
+            it.asJsonObject.run {
+                restaurants.add(
+                    Restaurant(
+                        id = get("id").asInt.toString(),
+                        name = get("value").asString,
+                    )
+                )
+            }
         }
-    }
-
-
-    private suspend fun extractGroup(group: Group, isFirstGroup: Boolean) {
-        Log.d(TAG, "DiningScrapper->extractGroup: ${group.name}")
-        val restaurantSelect = Jsoup.parse(getHtmlInMain()).getElementById(RESTAURANT)
-        val restaurants = restaurantSelect?.children()?.map {
-            Restaurant(it.attr("value"), it.ownText())
-        }?.filter { it.id != "0" } ?: throw Exception("empty restaurant!")
 
         restaurants.forEach { restaurant ->
-            if (isFirstGroup) {
-                setRestaurant(restaurant)
-                if (nextWeek) {
-                    val currentWeek = getLoadedDateOrCurrent()
-                    goNextWeek()
-                    waitForWeek(currentWeek.apply { addDay(7) })
+            Log.d(TAG, "DiningScrapper: want to extract restaurant ${restaurant.name}")
+            val reserveHtml = withContext(Dispatchers.Main) {
+                suspendCoroutine { cont ->
+                    bridge.listener = {
+                        cont.resume(it)
+                    }
+                    val script = if (isFirstGroup and nextWeek)
+                        "getNextWeek2(${group.id}, ${restaurant.id});"
+                    else
+                        "getReservePage2(${group.id}, ${restaurant.id});"
+                    webView.evaluateJavascript(script, null)
                 }
             }
-            Log.d(TAG, "DiningScrapper: want to extract restaurant ${restaurant.name}")
-            waitForRestaurant(restaurant)
-            extract(group, restaurant)
+            extract(group, restaurant, reserveHtml)
         }
     }
 
-    private suspend fun goNextWeek() {
-        withContext(Dispatchers.Main) {
-            webView.evaluateJavascript("getNextWeek();")
-        }
-    }
-
-    private suspend fun extract(group: Group, restaurant: Restaurant) {
-        // extract table
+    private fun extract(group: Group, restaurant: Restaurant, reserveHtml: String) {
         val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
-        while (Jsoup.parse(getHtmlInMain()).selectXpath(masterDivXpath).size == 0) {
-            delay(200)
-        }
-        val masterDiv = Jsoup.parse(getHtmlInMain()).selectXpath(masterDivXpath)[0]
+        val masterDiv = Jsoup.parse(reserveHtml).selectXpath(masterDivXpath)[0]
         masterDiv.children().drop(2).forEach { masterDivChild ->
             val header = masterDivChild.children()[0]
             val mealName = header.child(0).text()
@@ -224,74 +211,21 @@ class DiningScrapper @Inject constructor(
         }
     }
 
-    private suspend fun setRestaurant(restaurant: Restaurant) {
-        webView.evaluateJavascript(
-            "element492 = " +
-                    "document.getElementById(\"$RESTAURANT\");" +
-                    " element492.value = \"${restaurant.id}\";"
-        )
-        webView.evaluateJavascript(
-            "getReservePage();"
-        )
-    }
-
-    private suspend fun WebView.evaluateJavascript(script: String) {
-        withContext(Dispatchers.Main) {
-            suspendCoroutine<String> { continuation ->
+    private suspend fun WebView.evaluateJavascriptSuspend(script: String): String {
+        return withContext(Dispatchers.Main) {
+            suspendCoroutine { continuation ->
                 evaluateJavascript(
                     script
                 ) { response ->
-                    continuation.resume(response)
+                    if (response == null)
+                        continuation.resume("")
+                    else
+                        continuation.resume(response)
                 }
             }
         }
     }
 
-    private suspend fun waitForRestaurant(restaurant: Restaurant) {
-        val xPath = "//*[@id=\"myTabContent6\"]/div[2]/div[2]/div[2]/span[1]"
-        while (true) {
-            val span = Jsoup.parse(getHtmlInMain()).selectXpath(xPath)
-            val text = span.text()
-            val isLoaded =
-                text.contains(restaurant.name)
-            Log.d(TAG, "DiningScrapper->waitForRestaurant ($isLoaded) ${restaurant.name} VS $text")
-            if (isLoaded)
-                break
-            else
-                delay(200)
-        }
-    }
-
-    private suspend fun getLoadedDateOrCurrent(): PersianDate {
-        return runCatching {
-            val saturdayXPath = "//*[@id=\"TopDateDiv\"]/div[2]"
-            val saturday = Jsoup.parse(getHtmlInMain()).selectXpath(saturdayXPath)
-            val indexOfSlash = saturday.text().indexOf('/')
-            saturday.text().substring(indexOfSlash - 4, indexOfSlash + 6).toJalali()
-        }.getOrDefault(PersianDate().apply {
-            val dayOfWeek = (dayOfWeek() - Calendar.SATURDAY + 7) % 7
-            addDay(-dayOfWeek.toLong())
-        })
-    }
-
-    private suspend fun waitForWeek(weekSaturday: PersianDate) {
-        Log.d(TAG, "DiningScrapper->waitForWeek: $weekSaturday")
-        while (true) {
-            val isLoaded = runCatching {
-                val saturdayXPath = "//*[@id=\"TopDateDiv\"]/div[2]"
-                val saturday = Jsoup.parse(getHtmlInMain()).selectXpath(saturdayXPath).text()
-                val indexOfSlash = saturday.indexOf('/')
-                val loadedSaturday =
-                    saturday.substring(indexOfSlash - 4, indexOfSlash + 6).toJalali()
-                Log.d(TAG, "DiningScrapper->waitForWeek: loadedWeek = $loadedSaturday")
-                weekSaturday.toLongFormat() == loadedSaturday.toLongFormat()
-            }.getOrDefault(false)
-            if (isLoaded)
-                break
-            else
-                delay(500)
-        }
-    }
 
     private suspend fun getHtmlInMain() = withContext(Dispatchers.Main) {
         html

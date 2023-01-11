@@ -33,9 +33,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.appwidget.updateAll
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.amirhparhizgar.utdiningwidget.BuildConfig
 import com.amirhparhizgar.utdiningwidget.R
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord

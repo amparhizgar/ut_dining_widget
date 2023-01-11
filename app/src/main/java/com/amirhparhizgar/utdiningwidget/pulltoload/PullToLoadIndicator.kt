@@ -1,6 +1,5 @@
 package com.amirhparhizgar.utdiningwidget.pulltoload
 
-import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -15,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.amirhparhizgar.utdiningwidget.R
-import com.amirhparhizgar.utdiningwidget.ui.TAG
 
 /**
  * Created by AmirHossein Parhizgar on 12/8/2022.
