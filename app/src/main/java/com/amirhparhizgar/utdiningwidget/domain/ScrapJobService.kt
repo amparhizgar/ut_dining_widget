@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.work.Configuration
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
-import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
+import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
 import com.amirhparhizgar.utdiningwidget.ui.TAG
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
@@ -26,6 +26,7 @@ class ScrapJobService : JobService() {
     }
 
     override fun onStartJob(jobParameters: JobParameters?): Boolean {
+        Log.i(TAG, "onStartJob")
         scope.launch {
             kotlin.runCatching {
                 withContext(Dispatchers.IO) {
@@ -39,10 +40,13 @@ class ScrapJobService : JobService() {
                     }
                     saveResults(list2)
                 }
-                jobFinished(jobParameters, false)
-                scheduleForNearestWeekendIfNotScheduled()
+                withContext(Dispatchers.Main) {
+                    Log.i(TAG, "ScrapJobService-> Job Done :P")
+                    jobFinished(jobParameters, false)
+                    scheduleForNearestWeekend()
+                }
             }.onFailure {
-                Log.e(TAG, "doWork: Error Occurred", it)
+                Log.e(TAG, "doWork: Error Occurred. Retrying later...", it)
                 jobFinished(jobParameters, true)
             }
         }
@@ -51,6 +55,7 @@ class ScrapJobService : JobService() {
 
     override fun onStopJob(p0: JobParameters?): Boolean {
         scope.cancel()
+        Log.i(TAG, "onStopJob")
         return true // we want the job to be restarted
     }
 

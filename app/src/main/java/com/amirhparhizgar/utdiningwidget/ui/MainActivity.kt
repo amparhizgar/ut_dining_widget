@@ -37,7 +37,7 @@ import androidx.lifecycle.lifecycleScope
 import com.amirhparhizgar.utdiningwidget.BuildConfig
 import com.amirhparhizgar.utdiningwidget.R
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
-import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
+import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
 import com.amirhparhizgar.utdiningwidget.domain.UpdateWidgetReceiver
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity->onCreate: UT Dining Widget is up")
         lifecycleScope.launch(Dispatchers.Default) {
-            scheduleForNearestWeekendIfNotScheduled()
+            scheduleForNearestWeekend()
 
             UpdateWidgetReceiver.schedule(applicationContext)
             DiningWidget().updateAll(applicationContext)
