@@ -1,5 +1,8 @@
 package com.amirhparhizgar.utdiningwidget.ui
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -48,6 +51,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import saman.zamani.persiandate.PersianDate
 import saman.zamani.persiandate.PersianDateFormat
+
 
 const val TAG = "amir"
 
@@ -115,13 +119,23 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val scope = rememberCoroutineScope()
                     Scaffold(scaffoldState = scaffoldState, topBar = {
                         DiningTopBar(
                             getDataEnabled.value,
                             showMenu,
                             onShowMenu = { showMenu = it },
                             onShowAccountDialog = { showDialog.value = true },
-                            onGetData = { viewModel.getData() }
+                            onGetData = { viewModel.getData() },
+                            onAddWidget = {
+                                if (!requestPinDiningWidget())
+                                    scope.launch {
+                                        scaffoldState.snackbarHostState.showSnackbar(
+                                            message = getString(R.string.pin_widget_not_supported),
+                                            duration = SnackbarDuration.Long
+                                        )
+                                    }
+                            }
                         )
                     }) {
                         Column(
@@ -154,6 +168,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestPinDiningWidget(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+            return false
+        val appWidgetManager = getSystemService(AppWidgetManager::class.java)
+        val widgetComponent = ComponentName(
+            applicationContext,
+            DiningWidget::class.java
+        )
+        if (!appWidgetManager.isRequestPinAppWidgetSupported)
+            return false
+        return appWidgetManager.requestPinAppWidget(
+            widgetComponent,
+            null,
+            null
+        )
+    }
 }
 
 @Composable
@@ -163,6 +193,7 @@ private fun DiningTopBar(
     onShowMenu: (Boolean) -> Unit,
     onShowAccountDialog: () -> Unit,
     onGetData: () -> Unit,
+    onAddWidget: () -> Unit,
 ) {
     TopAppBar(
         title = { Text("UT Dining Widget") },
@@ -187,6 +218,14 @@ private fun DiningTopBar(
                     Text(text = stringResource(id = R.string.set_account))
                     Spacer(modifier = Modifier.width(16.dp))
                     Icon(Icons.Filled.AccountCircle, null)
+                }
+                DropdownMenuItem(onClick = {
+                    onAddWidget()
+                    onShowMenu(false)
+                }) {
+                    Text(text = stringResource(id = R.string.add_widget))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Icon(painterResource(R.drawable.ic_widget), null)
                 }
             }
         }

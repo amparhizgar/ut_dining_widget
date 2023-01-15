@@ -9,7 +9,8 @@
 	<string name="save">ذخیره</string>
 	<string name="get_data_now">دریافت اطلاعات</string>
 	<string name="appwidget_text">غذاها اینجا میاد...</string>
-	<string name="add_widget">ویجت تغذیه</string>
+	<string name="add_widget">اضافه کردن ویجت</string>
 	<string name="app_widget_description">غذاهای رزرو شدهٔ امروز</string>
 	<string name="get_data_failed">نشد که بشه!</string>
+    <string name="pin_widget_not_supported">لانچر شما از این قابلیت پشتیبانی نمی‌کنه. لطفاَ دستی اضافه کنید.</string>
 </resources>

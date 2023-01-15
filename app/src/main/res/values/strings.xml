@@ -8,7 +8,8 @@
 	<string name="save">Save</string>
 	<string name="get_data_now">Get Data Now</string>
 	<string name="appwidget_text">still loading foods…</string>
-	<string name="add_widget">Dining widget</string>
+	<string name="add_widget">Add Widget</string>
 	<string name="app_widget_description">shows reserved foods of day</string>
 	<string name="get_data_failed">Failed to get data!</string>
+	<string name="pin_widget_not_supported">Your launcher doesn\'t support this, Please add the widget manually.</string>
 </resources>
