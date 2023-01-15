@@ -20,10 +20,12 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -34,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
@@ -57,6 +60,7 @@ const val TAG = "amir"
 
 val USERNAME_KEY = stringPreferencesKey("username")
 val PASSWORD_KEY = stringPreferencesKey("password")
+val AUTO_REFRESH_KEY = booleanPreferencesKey("auto_refresh")
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -120,6 +124,8 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val scope = rememberCoroutineScope()
+                    val autoGetDataState = viewModel.autoRefreshFlow.collectAsState(initial = true)
+                    val context = LocalContext.current
                     Scaffold(scaffoldState = scaffoldState, topBar = {
                         DiningTopBar(
                             getDataEnabled.value,
@@ -135,7 +141,9 @@ class MainActivity : ComponentActivity() {
                                             duration = SnackbarDuration.Long
                                         )
                                     }
-                            }
+                            },
+                            autoGetData = autoGetDataState.value,
+                            onAutoGetDataChanged = {viewModel.setAutoRefresh(it, context)},
                         )
                     }) {
                         Column(
@@ -194,6 +202,8 @@ private fun DiningTopBar(
     onShowAccountDialog: () -> Unit,
     onGetData: () -> Unit,
     onAddWidget: () -> Unit,
+    autoGetData: Boolean,
+    onAutoGetDataChanged: (Boolean) -> Unit,
 ) {
     TopAppBar(
         title = { Text("UT Dining Widget") },
@@ -216,15 +226,27 @@ private fun DiningTopBar(
                     onShowMenu(false)
                 }) {
                     Text(text = stringResource(id = R.string.set_account))
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.weight(1f))
                     Icon(Icons.Filled.AccountCircle, null)
+                }
+                DropdownMenuItem(onClick = {
+                    onAutoGetDataChanged(autoGetData.not())
+                    onShowMenu(false)
+                }) {
+                    Checkbox(
+                        checked = autoGetData,
+                        onCheckedChange = { onAutoGetDataChanged(autoGetData.not()) }
+                    )
+                    Text(text = stringResource(id = R.string.auto_get_data))
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Rounded.Refresh, null)
                 }
                 DropdownMenuItem(onClick = {
                     onAddWidget()
                     onShowMenu(false)
                 }) {
                     Text(text = stringResource(id = R.string.add_widget))
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.weight(1f))
                     Icon(painterResource(R.drawable.ic_widget), null)
                 }
             }

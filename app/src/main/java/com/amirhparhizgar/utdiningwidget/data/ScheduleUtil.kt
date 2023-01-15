@@ -69,3 +69,9 @@ private fun getNextWeekendMillis(calendar: Calendar): Long {
     weekend.add(Calendar.DAY_OF_MONTH, 7)
     return weekend.timeInMillis
 }
+
+fun Context.cancelRefreshingJob(){
+    val jobScheduler = getSystemService(ComponentActivity.JOB_SCHEDULER_SERVICE) as JobScheduler
+    jobScheduler.cancel(123)
+    Log.i(TAG, "cancelRefreshingJob: Job unscheduled")
+}
