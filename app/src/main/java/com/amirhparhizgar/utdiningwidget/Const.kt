@@ -13,7 +13,7 @@ const val getRest2FuncDef = "function getRest2(group) {\n" +
         "\t\tsuccess: function (data) {\n" +
         "\t\t\tvar response = JSON.stringify(data);\n" +
         "\t\t\tconsole.log(response);\n" +
-        "\t\t\tbridge.putJsResult(response);\n" +
+        "\t\t\tbridge.setRestaurantsForGroup(group, response);\n" +
         "\t\t},\n" +
         "\t\terror: function () {\n" +
         "\t\t\tconsole.log(\"Error\")\n" +
@@ -33,7 +33,7 @@ const val getReservePage2FuncDef = "function getReservePage2(groupId, restId) {\
         "\t\tdata: { personId: 0, personGroupId: groupId, restId: restId, isKiosk: isKiosk },\n" +
         "\t\tsuccess: function (data) {\n" +
         "\t\t\tvar response = JSON.stringify(data);\n" +
-        "\t\t\tbridge.putJsResult(data);\n" +
+        "\t\t\tbridge.setReserves(groupId, restId, data);\n" +
         "\t\t},\n" +
         "\t\terror: function () {\n" +
         "\t\t\tconsole.log(\"Error\")\n" +
@@ -52,7 +52,7 @@ const val getNextWeek2FuncDef = "function getNextWeek2(groupId, restId) {\n" +
         "\t\tdataType: \"html\",\n" +
         "\t\tdata: { personId: 0, personGroupId: groupId, restId: restId, isKiosk: isKiosk },\n" +
         "\t\tsuccess: function (data) {\n" +
-        "\t\t\tbridge.putJsResult(data);\n" +
+        "\t\t\tbridge.setReserves(groupId, restId, data);\n" +
         "\t\t},\n" +
         "\t\terror: function () {\n" +
         "\t\t\tconsole.log(\"Error\")\n" +

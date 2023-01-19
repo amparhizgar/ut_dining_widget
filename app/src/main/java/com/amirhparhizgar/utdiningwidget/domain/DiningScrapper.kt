@@ -16,10 +16,9 @@ import com.amirhparhizgar.utdiningwidget.ui.*
 import com.daandtu.webscraper.WebScraper
 import com.google.gson.JsonParser
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -42,7 +41,6 @@ class DiningScrapper @Inject constructor(
     private lateinit var password: String
     private var onPageLoadedListener: (() -> Unit)? = null
     private var onErrorListener: ((error: WebResourceError) -> Unit)? = null
-    private val bridge = Bridge()
 
     private val theList = mutableListOf<ReserveRecord>()
 
@@ -118,6 +116,8 @@ class DiningScrapper @Inject constructor(
     }
 
     private suspend fun loadReserve() {
+        val bridge = Bridge()
+
         withContext(Dispatchers.Main) {
             webView.addJavascriptInterface(bridge, "bridge")
         }
@@ -135,16 +135,23 @@ class DiningScrapper @Inject constructor(
         webView.evaluateJavascriptSuspend(getReservePage2FuncDef)
         webView.evaluateJavascriptSuspend(getNextWeek2FuncDef)
 
-        groups.forEachIndexed { i, group ->
-            extractGroup(group, i == 0)
+        runBlocking {
+            groups.firstOrNull()?.let {
+                extractGroup(it, true, bridge)
+            }
+            groups.drop(1).map { group ->
+                async {
+                    extractGroup(group, false, bridge)
+                }
+            }.toList().awaitAll()
         }
     }
 
-    private suspend fun extractGroup(group: Group, isFirstGroup: Boolean) {
+    private suspend fun extractGroup(group: Group, isFirstGroup: Boolean, bridge: Bridge) {
         val restaurantsJson = withContext(Dispatchers.Main) {
             suspendCoroutine { cont ->
-                bridge.listener = {
-                    cont.resume(it)
+                bridge.addSetRestaurantsListener(group.id.toInt()) { result ->
+                    cont.resume(result)
                 }
                 webView.evaluateJavascript("getRest2(${group.id});", null)
             }
@@ -168,8 +175,11 @@ class DiningScrapper @Inject constructor(
             Log.d(TAG, "DiningScrapper: want to extract restaurant ${restaurant.name}")
             val reserveHtml = withContext(Dispatchers.Main) {
                 suspendCoroutine { cont ->
-                    bridge.listener = {
-                        cont.resume(it)
+                    bridge.addSetReservesListener(
+                        group.id.toInt(),
+                        restaurant.id.toInt()
+                    ) { result ->
+                        cont.resume(result)
                     }
                     val script = if (isFirstGroup and nextWeek)
                         "getNextWeek2(${group.id}, ${restaurant.id});"
