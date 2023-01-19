@@ -1,10 +1,14 @@
 package com.amirhparhizgar.utdiningwidget.usecase
 
+import android.content.Context
 import android.util.Log
+import androidx.glance.appwidget.updateAll
 import com.amirhparhizgar.utdiningwidget.data.ReserveDao
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.domain.DiningScrapper
+import com.amirhparhizgar.utdiningwidget.ui.DiningWidget
 import com.amirhparhizgar.utdiningwidget.ui.TAG
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -13,6 +17,7 @@ import javax.inject.Inject
 class ScrapUseCase @Inject constructor(
     val scrapper: DiningScrapper,
     private val db: ReserveDao,
+    @ApplicationContext private val context: Context,
 ) {
     suspend operator fun invoke(): Result<Boolean> {
         return runCatching {
@@ -30,6 +35,7 @@ class ScrapUseCase @Inject constructor(
                     scrapper.start()
                 }
                 saveResults(list2)
+                DiningWidget().updateAll(context)
                 true
             }
         }.onFailure {

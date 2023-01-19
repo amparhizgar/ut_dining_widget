@@ -4,12 +4,14 @@ import android.app.job.JobParameters
 import android.app.job.JobService
 import android.util.Log
 import androidx.work.Configuration
-import com.amirhparhizgar.utdiningwidget.data.getDBInstance
-import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
 import com.amirhparhizgar.utdiningwidget.ui.TAG
+import com.amirhparhizgar.utdiningwidget.usecase.ScrapUseCase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -20,33 +22,24 @@ class ScrapJobService : JobService() {
     @Inject
     lateinit var scrapper: DiningScrapper
 
+    @Inject
+    lateinit var scrapUseCase: ScrapUseCase
+
     init {
         val builder: Configuration.Builder = Configuration.Builder()
         builder.setJobSchedulerJobIdRange(0, 1000)
     }
 
     override fun onStartJob(jobParameters: JobParameters?): Boolean {
-        Log.i(TAG, "onStartJob")
         scope.launch {
-            kotlin.runCatching {
-                withContext(Dispatchers.IO) {
-                    val list1 = withTimeout(10 * 1000) {
-                        scrapper.start()
-                    }
-                    saveResults(list1)
-                    val list2 = withTimeout(10 * 1000) {
-                        scrapper.nextWeek = true
-                        scrapper.start()
-                    }
-                    saveResults(list2)
-                }
-                withContext(Dispatchers.Main) {
-                    Log.i(TAG, "ScrapJobService-> Job Done :P")
-                    jobFinished(jobParameters, false)
-                    scheduleForNearestWeekend()
-                }
-            }.onFailure {
-                Log.e(TAG, "doWork: Error Occurred. Retrying later...", it)
+            Log.i(TAG, "onStartJob")
+            val result = scrapUseCase.invoke()
+            if (result.isSuccess) {
+                Log.i(TAG, "ScrapJobService-> Job Done :P")
+                jobFinished(jobParameters, false)
+                scheduleForNearestWeekend()
+            } else {
+                Log.e(TAG, "doWork: Error Occurred. Retrying later...", result.exceptionOrNull())
                 jobFinished(jobParameters, true)
             }
         }
@@ -57,12 +50,5 @@ class ScrapJobService : JobService() {
         scope.cancel()
         Log.i(TAG, "onStopJob")
         return true // we want the job to be restarted
-    }
-
-    private suspend fun saveResults(list: List<ReserveRecord>) {
-        withContext(Dispatchers.IO) {
-            val db = getDBInstance(applicationContext).dao()
-            db.insertAll(*list.toTypedArray())
-        }
     }
 }
