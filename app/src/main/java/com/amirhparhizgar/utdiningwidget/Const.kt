@@ -17,7 +17,7 @@ const val getRest2FuncDef = "function getRest2(group) {\n" +
         "\t\t},\n" +
         "\t\terror: function () {\n" +
         "\t\t\tconsole.log(\"Error\")\n" +
-        "\t\t\tbridge.putJsResult(\"\");\n" +
+        "\t\t\tbridge.setRestaurantsForGroup(group, \"\");\n" +
         "\t\t}\n" +
         "\t});\n" +
         "}"
@@ -37,7 +37,7 @@ const val getReservePage2FuncDef = "function getReservePage2(groupId, restId) {\
         "\t\t},\n" +
         "\t\terror: function () {\n" +
         "\t\t\tconsole.log(\"Error\")\n" +
-        "\t\t\tbridge.putJsResult(\"\");\n" +
+        "\t\t\tbridge.setReserves(groupId, restId, \"\");\n" +
         "\t\t}\n" +
         "\t});\n" +
         "}"
@@ -56,7 +56,7 @@ const val getNextWeek2FuncDef = "function getNextWeek2(groupId, restId) {\n" +
         "\t\t},\n" +
         "\t\terror: function () {\n" +
         "\t\t\tconsole.log(\"Error\")\n" +
-        "\t\t\tbridge.putJsResult(\"\");\n" +
+        "\t\t\tbridge.setReserves(groupId, restId, \"\");\n" +
         "\t\t}\n" +
         "\t});\n" +
         "}"

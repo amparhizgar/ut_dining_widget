@@ -150,10 +150,16 @@ class DiningScrapper @Inject constructor(
     private suspend fun extractGroup(group: Group, isFirstGroup: Boolean, bridge: Bridge) {
         val restaurantsJson = withContext(Dispatchers.Main) {
             suspendCoroutine { cont ->
-                bridge.addSetRestaurantsListener(group.id.toInt()) { result ->
-                    cont.resume(result)
+                val fetch = {
+                    webView.evaluateJavascript("getRest2(${group.id});", null)
                 }
-                webView.evaluateJavascript("getRest2(${group.id});", null)
+                bridge.addSetRestaurantsListener(group.id.toInt()) { result ->
+                    if (result.isEmpty())
+                        fetch()
+                    else
+                        cont.resume(result)
+                }
+                fetch()
             }
         }
         val restaurants = mutableListOf<Restaurant>()
@@ -174,18 +180,24 @@ class DiningScrapper @Inject constructor(
         restaurants.forEach { restaurant ->
             Log.d(TAG, "DiningScrapper: want to extract restaurant ${restaurant.name}")
             val reserveHtml = withContext(Dispatchers.Main) {
-                suspendCoroutine { cont ->
-                    bridge.addSetReservesListener(
-                        group.id.toInt(),
-                        restaurant.id.toInt()
-                    ) { result ->
-                        cont.resume(result)
-                    }
+                val fetch = {
                     val script = if (isFirstGroup and nextWeek)
                         "getNextWeek2(${group.id}, ${restaurant.id});"
                     else
                         "getReservePage2(${group.id}, ${restaurant.id});"
                     webView.evaluateJavascript(script, null)
+                }
+                suspendCoroutine { cont ->
+                    bridge.addSetReservesListener(
+                        group.id.toInt(),
+                        restaurant.id.toInt()
+                    ) { result ->
+                        if (result.isEmpty())
+                            fetch()
+                        else
+                            cont.resume(result)
+                    }
+                    fetch()
                 }
             }
             extract(group, restaurant, reserveHtml)
