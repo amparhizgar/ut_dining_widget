@@ -27,14 +27,14 @@ class ScrapUseCase @Inject constructor(
                         db.insertAll(reserveRecord)
                     }
                 }
-                withTimeout(20 * 1000) {
+                withTimeout(20 * 7000) {
                     scrapper.login()
                 }
-                withTimeout(60 * 1000) {
+                withTimeout(60 * 1500) {
                     scrapper.nextWeek = false
                     scrapper.start()
                 }
-                withTimeout(60 * 1000) {
+                withTimeout(60 * 1500) {
                     scrapper.nextWeek = true
                     scrapper.start()
                 }

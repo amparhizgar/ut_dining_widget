@@ -206,7 +206,7 @@ private fun DiningTopBar(
     onAutoGetDataChanged: (Boolean) -> Unit,
 ) {
     TopAppBar(
-        title = { Text("UT Dining Widget") },
+        title = { Text(stringResource(id = R.string.app_name)) },
         actions = {
             IconButton(
                 onClick = onGetData,

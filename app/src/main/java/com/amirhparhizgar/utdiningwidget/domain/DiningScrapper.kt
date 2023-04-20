@@ -7,11 +7,9 @@ import android.view.View
 import android.webkit.*
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.amirhparhizgar.utdiningwidget.Bridge
+import com.amirhparhizgar.utdiningwidget.*
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
-import com.amirhparhizgar.utdiningwidget.getNextWeek2FuncDef
-import com.amirhparhizgar.utdiningwidget.getReservePage2FuncDef
-import com.amirhparhizgar.utdiningwidget.getRest2FuncDef
+import com.amirhparhizgar.utdiningwidget.data.model.uniconfig.UniConfig
 import com.amirhparhizgar.utdiningwidget.ui.*
 import com.daandtu.webscraper.WebScraper
 import com.google.gson.JsonParser
@@ -35,6 +33,7 @@ data class Restaurant(val id: String, val name: String)
 @SuppressLint("SetJavaScriptEnabled")
 class DiningScrapper @Inject constructor(
     @ApplicationContext context: Context,
+    private val uniConfig: UniConfig,
     private val dataStore: DataStore<Preferences>
 ) : WebScraper(context) {
     val results: Channel<ReserveRecord> = Channel()
@@ -52,7 +51,7 @@ class DiningScrapper @Inject constructor(
             @Suppress("OVERRIDE_DEPRECATION")
             override fun shouldInterceptRequest(view: WebView?, url: String): WebResourceResponse? {
                 @Suppress("DEPRECATION")
-                return if (url.endsWith(".css")
+                return if (BuildConfig.DEBUG.not() && url.endsWith(".css")
                     || url.endsWith(".ico")
                 ) { // add other specific resources..
                     WebResourceResponse(
@@ -100,13 +99,13 @@ class DiningScrapper @Inject constructor(
             password = it[PASSWORD_KEY] ?: ""
         }.first()
 
-        loadURLAndWait("https://dining2.ut.ac.ir")
+        loadURLAndWait(uniConfig.loginURL)
         val submit = withContext(Dispatchers.Main) {
-            val usernameField = findElementById("username")
-            val passwordField = findElementById("password")
+            val usernameField = findElementById(uniConfig.usernameField)
+            val passwordField = findElementById(uniConfig.passwordField)
             usernameField.text = username
             passwordField.text = password
-            findElementByName("submit")
+            findElementByType("submit")
         }
         doAndAwaitLoad {
             submit.click()
@@ -120,7 +119,7 @@ class DiningScrapper @Inject constructor(
             webView.addJavascriptInterface(bridge, "bridge")
         }
 
-        loadURLAndWait("https://dining2.ut.ac.ir/Reserves")
+        loadURLAndWait(uniConfig.reservesURL)
         var groups: List<Group>? = null
         while (groups == null) {
             val personGroup = Jsoup.parse(getHtmlInMain()).getElementById(PERSON_GROUP_ID)

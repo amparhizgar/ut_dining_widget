@@ -13,4 +13,5 @@
 	<string name="app_widget_description">غذاهای رزرو شدهٔ امروز</string>
 	<string name="get_data_failed">نشد که بشه!</string>
     <string name="pin_widget_not_supported">لانچر شما از این قابلیت پشتیبانی نمی‌کنه. لطفاَ دستی اضافه کنید.</string>
+	<string name="auto_get_data">گرفتن خودکار داده</string>
 </resources>

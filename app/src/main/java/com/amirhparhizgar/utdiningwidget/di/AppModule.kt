@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.amirhparhizgar.utdiningwidget.BuildConfig
 import com.amirhparhizgar.utdiningwidget.data.ReserveDao
-import com.amirhparhizgar.utdiningwidget.data.ReserveDatabase
 import com.amirhparhizgar.utdiningwidget.data.getDBInstance
+import com.amirhparhizgar.utdiningwidget.data.model.uniconfig.QomUniConfig
+import com.amirhparhizgar.utdiningwidget.data.model.uniconfig.UTConfig
+import com.amirhparhizgar.utdiningwidget.data.model.uniconfig.UniConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,4 +36,13 @@ object AppModule {
             context.preferencesDataStoreFile("settings")
         }
 
+    @Provides
+    @Suppress("KotlinConstantConditions")
+    fun provideUniConfig(): UniConfig {
+        return when (BuildConfig.FLAVOR) {
+            "UT" -> UTConfig()
+            "Qom" -> QomUniConfig()
+            else -> UTConfig()
+        }
+    }
 }
