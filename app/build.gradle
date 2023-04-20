@@ -31,6 +31,16 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    flavorDimensions "uni"
+    productFlavors {
+        UT {
+            dimension "uni"
+        }
+        Qom {
+            dimension "uni"
+            applicationId "com.amirhparhizgar.diningwidget.qom"
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
