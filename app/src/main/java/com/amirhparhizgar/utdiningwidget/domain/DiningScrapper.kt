@@ -230,16 +230,21 @@ class DiningScrapper @Inject constructor(
         }
     }
 
-    private suspend fun WebView.evaluateJavascriptSuspend(script: String): String {
+    private suspend fun WebView.evaluateJavascriptSuspend(
+        script: String,
+        timeout: Long = 5_000
+    ): String {
         return withContext(Dispatchers.Main) {
-            suspendCoroutine { continuation ->
-                evaluateJavascript(
-                    script
-                ) { response ->
-                    if (response == null)
-                        continuation.resume("")
-                    else
-                        continuation.resume(response)
+            withTimeout(timeout) {
+                suspendCoroutine { continuation ->
+                    evaluateJavascript(
+                        script
+                    ) { response ->
+                        if (response == null)
+                            continuation.resume("")
+                        else
+                            continuation.resume(response)
+                    }
                 }
             }
         }
@@ -250,29 +255,31 @@ class DiningScrapper @Inject constructor(
         html
     }
 
-    private suspend fun loadURLAndWait(URL: String) {
-        doAndAwaitLoad {
+    private suspend fun loadURLAndWait(URL: String, timeout: Long = 10_000) {
+        doAndAwaitLoad(timeout) {
             loadURL(URL)
         }
     }
 
-    private suspend fun doAndAwaitLoad(runnable: () -> Unit) {
+    private suspend fun doAndAwaitLoad(timeout: Long = 10_000, runnable: () -> Unit) {
         withContext(Dispatchers.Main) {
-            suspendCoroutine {
-                onPageLoadedListener = {
-                    it.resume(Unit)
-                }
-                onErrorListener = { error ->
-                    onPageLoadedListener =
-                        null // Otherwise it will throw "It's already resumed" exception
-                    it.resumeWithException(
-                        WebResourceException(
-                            error.description.toString(),
-                            error.errorCode
+            withTimeout(timeout) {
+                suspendCoroutine {
+                    onPageLoadedListener = {
+                        it.resume(Unit)
+                    }
+                    onErrorListener = { error ->
+                        onPageLoadedListener =
+                            null // Otherwise it will throw "It's already resumed" exception
+                        it.resumeWithException(
+                            WebResourceException(
+                                error.description.toString(),
+                                error.errorCode
+                            )
                         )
-                    )
+                    }
+                    runnable()
                 }
-                runnable()
             }
         }
     }

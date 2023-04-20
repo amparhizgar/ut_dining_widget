@@ -30,11 +30,11 @@ class ScrapUseCase @Inject constructor(
                 withTimeout(20 * 7000) {
                     scrapper.login()
                 }
-                withTimeout(60 * 1500) {
+                withTimeout(90 * 1500) {
                     scrapper.nextWeek = false
                     scrapper.start()
                 }
-                withTimeout(60 * 1500) {
+                withTimeout(90 * 1500) {
                     scrapper.nextWeek = true
                     scrapper.start()
                 }
