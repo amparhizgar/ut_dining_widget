@@ -17,6 +17,7 @@ import com.daandtu.webscraper.WebScraper
 import com.google.gson.JsonParser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.jsoup.Jsoup
@@ -36,13 +37,12 @@ class DiningScrapper @Inject constructor(
     @ApplicationContext context: Context,
     private val dataStore: DataStore<Preferences>
 ) : WebScraper(context) {
+    val results: Channel<ReserveRecord> = Channel()
     var nextWeek: Boolean = false
     private lateinit var username: String
     private lateinit var password: String
     private var onPageLoadedListener: (() -> Unit)? = null
     private var onErrorListener: ((error: WebResourceError) -> Unit)? = null
-
-    private val theList = mutableListOf<ReserveRecord>()
 
     private val webView
         get() = view as WebView
@@ -87,10 +87,8 @@ class DiningScrapper @Inject constructor(
         webView.settings.javaScriptEnabled = true
     }
 
-    suspend fun start(): List<ReserveRecord> {
-        theList.removeAll { true }
+    suspend fun start() {
         loadReserve()
-        return theList
     }
 
     suspend fun login() {
@@ -204,7 +202,7 @@ class DiningScrapper @Inject constructor(
         }
     }
 
-    private fun extract(group: Group, restaurant: Restaurant, reserveHtml: String) {
+    private suspend fun extract(group: Group, restaurant: Restaurant, reserveHtml: String) {
         val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
         val masterDiv = Jsoup.parse(reserveHtml).selectXpath(masterDivXpath)[0]
         masterDiv.children().drop(2).forEach { masterDivChild ->
@@ -226,7 +224,7 @@ class DiningScrapper @Inject constructor(
                         label,
                         checked
                     )
-                    theList.add(record)
+                    results.send(record)
                     Log.d(TAG, "$date: $mealName: $checked")
                 }
             }
