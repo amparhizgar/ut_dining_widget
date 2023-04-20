@@ -88,7 +88,7 @@ class MainViewModel @Inject constructor(
     val autoRefreshFlow: Flow<Boolean> by lazy {
         dataStore.data
             .map { preferences ->
-                preferences[AUTO_REFRESH_KEY] ?: true
+                preferences[AUTO_REFRESH_KEY] ?: false
             }
     }
 

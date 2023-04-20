@@ -5,6 +5,7 @@ import android.app.job.JobService
 import android.util.Log
 import androidx.work.Configuration
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
+import com.amirhparhizgar.utdiningwidget.notifyAutoRefreshing
 import com.amirhparhizgar.utdiningwidget.ui.TAG
 import com.amirhparhizgar.utdiningwidget.usecase.ScrapUseCase
 import dagger.hilt.android.AndroidEntryPoint
@@ -13,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+const val CHANNEL_AUTO_REFRESH: String = "auto_refresh"
 
 @AndroidEntryPoint
 class ScrapJobService : JobService() {
@@ -36,10 +39,12 @@ class ScrapJobService : JobService() {
             val result = scrapUseCase.invoke()
             if (result.isSuccess) {
                 Log.i(TAG, "ScrapJobService-> Job Done :P")
+                notifyAutoRefreshing(true)
                 jobFinished(jobParameters, false)
                 scheduleForNearestWeekend()
             } else {
                 Log.e(TAG, "doWork: Error Occurred. Retrying later...", result.exceptionOrNull())
+                notifyAutoRefreshing(false)
                 jobFinished(jobParameters, true)
             }
         }
@@ -51,4 +56,5 @@ class ScrapJobService : JobService() {
         Log.i(TAG, "onStopJob")
         return true // we want the job to be restarted
     }
+
 }

@@ -14,4 +14,8 @@
 	<string name="get_data_failed">نشد که بشه!</string>
     <string name="pin_widget_not_supported">لانچر شما از این قابلیت پشتیبانی نمی‌کنه. لطفاَ دستی اضافه کنید.</string>
 	<string name="auto_get_data">گرفتن خودکار داده</string>
+    <string name="auto_refresh_success_title">لیست رزروها به روز شد</string>
+	<string name="auto_refresh_fail_title">دریافت رزروها به مشکل خورد!</string>
+	<string name="auto_refresh_channel_name">اطلاع رسانی دریافت خودکار رزرو‌ها</string>
+	<string name="channel_description">پس از تلاش برای دریافت رزروها موفقیت یا عدم موفقیت آن را به اطلاع شما می‌رسانیم</string>
 </resources>

@@ -6,7 +6,9 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -42,6 +44,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
 import com.amirhparhizgar.utdiningwidget.BuildConfig
 import com.amirhparhizgar.utdiningwidget.R
+import com.amirhparhizgar.utdiningwidget.checkAndRequestNotificationPermission
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
 import com.amirhparhizgar.utdiningwidget.domain.UpdateWidgetReceiver
@@ -127,6 +130,11 @@ class MainActivity : ComponentActivity() {
                     val autoGetDataState = viewModel.autoRefreshFlow.collectAsState(initial = true)
                     val context = LocalContext.current
                     Scaffold(scaffoldState = scaffoldState, topBar = {
+                        val launcher = rememberLauncherForActivityResult(
+                            ActivityResultContracts.RequestPermission()
+                        ) {
+                            // not important
+                        }
                         DiningTopBar(
                             getDataEnabled.value,
                             showMenu,
@@ -143,7 +151,11 @@ class MainActivity : ComponentActivity() {
                                     }
                             },
                             autoGetData = autoGetDataState.value,
-                            onAutoGetDataChanged = {viewModel.setAutoRefresh(it, context)},
+                            onAutoGetDataChanged = { enable ->
+                                if (enable)
+                                    checkAndRequestNotificationPermission(context, launcher)
+                                viewModel.setAutoRefresh(enable, context)
+                            },
                         )
                     }) {
                         Column(

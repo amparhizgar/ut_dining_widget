@@ -13,4 +13,8 @@
 	<string name="get_data_failed">Failed to get data!</string>
 	<string name="pin_widget_not_supported">Your launcher doesn\'t support this, Please add the widget manually.</string>
 	<string name="auto_get_data">Auto refreshing</string>
+    <string name="auto_refresh_success_title">Just got new reserves</string>
+	<string name="auto_refresh_fail_title">Couldn\'t get new reserves</string>
+    <string name="auto_refresh_channel_name">Auto Get Reserves Information</string>
+	<string name="channel_description">After tring to get data informs you about the result</string>
 </resources>
