@@ -3,15 +3,19 @@ package com.amirhparhizgar.utdiningwidget.domain
 import android.app.job.JobParameters
 import android.app.job.JobService
 import android.util.Log
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.work.Configuration
-import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
+import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
 import com.amirhparhizgar.utdiningwidget.notifyAutoRefreshing
 import com.amirhparhizgar.utdiningwidget.ui.TAG
+import com.amirhparhizgar.utdiningwidget.ui.autoRefreshEnabled
 import com.amirhparhizgar.utdiningwidget.usecase.ScrapUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,6 +32,9 @@ class ScrapJobService : JobService() {
     @Inject
     lateinit var scrapUseCase: ScrapUseCase
 
+    @Inject
+    lateinit var datastore: DataStore<Preferences>
+
     init {
         val builder: Configuration.Builder = Configuration.Builder()
         builder.setJobSchedulerJobIdRange(0, 1000)
@@ -41,7 +48,9 @@ class ScrapJobService : JobService() {
                 Log.i(TAG, "ScrapJobService-> Job Done :P")
                 notifyAutoRefreshing(true)
                 jobFinished(jobParameters, false)
-                scheduleForNearestWeekend()
+                scheduleForNearestWeekendIfNotScheduled(
+                    datastore.data.first().autoRefreshEnabled
+                )
             } else {
                 Log.e(TAG, "doWork: Error Occurred. Retrying later...", result.exceptionOrNull())
                 notifyAutoRefreshing(false)

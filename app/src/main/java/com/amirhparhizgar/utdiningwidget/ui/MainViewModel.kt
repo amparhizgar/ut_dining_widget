@@ -12,7 +12,7 @@ import com.amirhparhizgar.utdiningwidget.data.ReserveDao
 import com.amirhparhizgar.utdiningwidget.data.cancelRefreshingJob
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
 import com.amirhparhizgar.utdiningwidget.data.model.sortBasedOnMeal
-import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
+import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
 import com.amirhparhizgar.utdiningwidget.domain.WebResourceException
 import com.amirhparhizgar.utdiningwidget.usecase.ScrapUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +41,8 @@ class MainViewModel @Inject constructor(
     }
 
     val incrementalFlow = MutableStateFlow<List<ReserveRecord>>(emptyList())
+
+    val isAutoRefreshEnabled = dataStore.data.map { it.autoRefreshEnabled }
 
     init {
         viewModelScope.launch {
@@ -87,9 +89,7 @@ class MainViewModel @Inject constructor(
 
     val autoRefreshFlow: Flow<Boolean> by lazy {
         dataStore.data
-            .map { preferences ->
-                preferences[AUTO_REFRESH_KEY] ?: false
-            }
+            .map { it.autoRefreshEnabled }
     }
 
     fun setAutoRefresh(enable: Boolean, context: Context) {
@@ -98,7 +98,7 @@ class MainViewModel @Inject constructor(
                 it[AUTO_REFRESH_KEY] = enable
             }
             if (enable)
-                context.scheduleForNearestWeekend()
+                context.scheduleForNearestWeekendIfNotScheduled(true)
             else
                 context.cancelRefreshingJob()
         }
@@ -119,8 +119,10 @@ class MainViewModel @Inject constructor(
                 when (result.exceptionOrNull()) {
                     is WebResourceException ->
                         showMessageEvent.emit(MessageEvent.NoConnection)
+
                     is TimeoutCancellationException ->
                         showMessageEvent.emit(MessageEvent.TimeOutError)
+
                     else ->
                         showMessageEvent.emit(MessageEvent.UnknownError)
                 }

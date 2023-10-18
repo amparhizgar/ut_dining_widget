@@ -57,7 +57,7 @@ android {
     }
     packagingOptions {
         resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+//            excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
 }
@@ -109,6 +109,8 @@ dependencies {
     // glance for widgets
     implementation "androidx.glance:glance-appwidget:1.0.0-alpha04"
 
+    debugImplementation "androidx.compose.ui:ui-tooling:1.3.2"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.3.2"
 }
 // Allow references to generated code
 kapt {

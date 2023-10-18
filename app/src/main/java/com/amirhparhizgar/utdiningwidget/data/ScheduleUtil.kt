@@ -11,7 +11,6 @@ import androidx.activity.ComponentActivity
 import com.amirhparhizgar.utdiningwidget.BuildConfig
 import com.amirhparhizgar.utdiningwidget.domain.ScrapJobService
 import com.amirhparhizgar.utdiningwidget.ui.TAG
-import java.time.LocalTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -19,20 +18,29 @@ import java.util.concurrent.TimeUnit
  * Created by AmirHossein Parhizgar on 12/8/2022.
  */
 
-fun Context.scheduleForNearestWeekendIfNotScheduled() {
+fun Context.scheduleForNearestWeekendIfNotScheduled(isEnabled: Boolean) {
+    if (isEnabled.not()) return
     val jobScheduler = getSystemService(ComponentActivity.JOB_SCHEDULER_SERVICE) as JobScheduler
     if (jobScheduler.getPendingJob(123) != null)
         return
     scheduleForNearestWeekend()
 }
 
-fun Context.scheduleForNearestWeekend() {
+private fun Context.scheduleForNearestWeekend() {
     val jobScheduler = getSystemService(ComponentActivity.JOB_SCHEDULER_SERVICE) as JobScheduler
     val startDelay =
         if (BuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val secondsPastLastRoundMinute = with(LocalTime.now()) { 60 * (minute % 5) + second }
-            val fiveMinutesInSeconds = TimeUnit.MINUTES.toSeconds(5)
-            TimeUnit.SECONDS.toMillis(fiveMinutesInSeconds - secondsPastLastRoundMinute)
+            val epochMillisDiff = Calendar.getInstance().apply {
+                set(Calendar.YEAR, 1970)
+                set(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val fiveMinutesInMillis = TimeUnit.HOURS.toMillis(4)
+            val secondsPastLastRoundMinute = (System.currentTimeMillis() - epochMillisDiff) % fiveMinutesInMillis
+            fiveMinutesInMillis - secondsPastLastRoundMinute
         } else
             getNextWeekendMillis(Calendar.getInstance()) - System.currentTimeMillis()
 
@@ -70,7 +78,7 @@ private fun getNextWeekendMillis(calendar: Calendar): Long {
     return weekend.timeInMillis
 }
 
-fun Context.cancelRefreshingJob(){
+fun Context.cancelRefreshingJob() {
     val jobScheduler = getSystemService(ComponentActivity.JOB_SCHEDULER_SERVICE) as JobScheduler
     jobScheduler.cancel(123)
     Log.i(TAG, "cancelRefreshingJob: Job unscheduled")

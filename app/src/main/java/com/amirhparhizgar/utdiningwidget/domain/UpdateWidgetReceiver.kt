@@ -8,14 +8,25 @@ import android.content.Context.ALARM_SERVICE
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.glance.appwidget.updateAll
 import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
 import com.amirhparhizgar.utdiningwidget.ui.DiningWidget
 import com.amirhparhizgar.utdiningwidget.ui.TAG
+import com.amirhparhizgar.utdiningwidget.ui.autoRefreshEnabled
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import saman.zamani.persiandate.PersianDate
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class UpdateWidgetReceiver : BroadcastReceiver() {
+
+    @Inject
+    lateinit var datastore: DataStore<Preferences>
+
     companion object {
         const val ACTION_ALARM_UPDATE_WIDGET = "ACTION_ALARM_UPDATE_WIDGET"
 
@@ -32,7 +43,7 @@ class UpdateWidgetReceiver : BroadcastReceiver() {
                 flag
             )
             val c = PersianDate()
-            c.hour = 0 // hour at witch widget get updated
+            c.hour = 23 // hour at witch widget get updated
             c.minute = 0
             c.second = 0
             if (c.time <= System.currentTimeMillis())
@@ -41,7 +52,7 @@ class UpdateWidgetReceiver : BroadcastReceiver() {
                 AlarmManager.RTC_WAKEUP,
                 c.time, pendingIntent
             )
-            Log.d(TAG, "UpdateReceiver->schedule: widget update set for ${c.time}")
+            Log.d(TAG, "UpdateReceiver->schedule: widget update set for $c")
         }
     }
 
@@ -53,8 +64,11 @@ class UpdateWidgetReceiver : BroadcastReceiver() {
                     DiningWidget().updateAll(context)
                 }
                 schedule(context)
-                context.scheduleForNearestWeekendIfNotScheduled()
+                runBlocking {
+                    context.scheduleForNearestWeekendIfNotScheduled(datastore.data.first().autoRefreshEnabled)
+                }
             }
+
             ACTION_ALARM_UPDATE_WIDGET -> {
                 runBlocking {
                     DiningWidget().updateAll(context)

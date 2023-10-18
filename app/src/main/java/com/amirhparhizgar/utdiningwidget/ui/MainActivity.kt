@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.appwidget.updateAll
@@ -46,12 +47,13 @@ import com.amirhparhizgar.utdiningwidget.BuildConfig
 import com.amirhparhizgar.utdiningwidget.R
 import com.amirhparhizgar.utdiningwidget.checkAndRequestNotificationPermission
 import com.amirhparhizgar.utdiningwidget.data.model.ReserveRecord
-import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekend
+import com.amirhparhizgar.utdiningwidget.data.scheduleForNearestWeekendIfNotScheduled
 import com.amirhparhizgar.utdiningwidget.domain.UpdateWidgetReceiver
 import com.amirhparhizgar.utdiningwidget.ui.theme.UTDiningWidgetTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -64,6 +66,8 @@ const val TAG = "amir"
 val USERNAME_KEY = stringPreferencesKey("username")
 val PASSWORD_KEY = stringPreferencesKey("password")
 val AUTO_REFRESH_KEY = booleanPreferencesKey("auto_refresh")
+val Preferences.autoRefreshEnabled
+    get() = this[AUTO_REFRESH_KEY] ?: false
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -72,8 +76,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "MainActivity->onCreate: UT Dining Widget is up")
+        viewModel // first access to viewModel must not be inside Worker thread (because WebScrapper is injected in viewModel)
         lifecycleScope.launch(Dispatchers.Default) {
-            scheduleForNearestWeekend()
+            scheduleForNearestWeekendIfNotScheduled(viewModel.isAutoRefreshEnabled.first())
 
             UpdateWidgetReceiver.schedule(applicationContext)
             DiningWidget().updateAll(applicationContext)

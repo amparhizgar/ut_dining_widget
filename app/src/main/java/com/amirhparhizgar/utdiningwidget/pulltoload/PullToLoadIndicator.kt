@@ -2,7 +2,10 @@ package com.amirhparhizgar.utdiningwidget.pulltoload
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
@@ -11,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.amirhparhizgar.utdiningwidget.R
 
@@ -29,11 +34,11 @@ fun PullToLoadIndicator(
 ) {
     Crossfade(
         targetState = loading,
-        animationSpec = tween(durationMillis = CrossfadeDurationMs)
+        animationSpec = tween(durationMillis = CrossfadeDurationMs), label = ""
     ) { targetLoading ->
         Box(
             modifier = modifier
-                .height(state.height.dp)
+                .height { state.height.dp }
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
@@ -61,3 +66,16 @@ fun PullToLoadIndicator(
 
 private const val CrossfadeDurationMs = 100
 private val StrokeWidth = 2.5.dp
+
+fun Modifier.height(height: ()->Dp):Modifier = layout { measurable, constraints ->
+    val h = height().toPx().toInt()
+    val placeable = measurable.measure(
+        constraints.copy(
+            minHeight = h,
+            maxHeight = h
+        )
+    )
+    layout(placeable.width, placeable.height) {
+        placeable.placeRelative(0, 0)
+    }
+}
