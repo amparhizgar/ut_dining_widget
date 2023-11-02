@@ -43,7 +43,7 @@ class UpdateWidgetReceiver : BroadcastReceiver() {
                 flag
             )
             val c = PersianDate()
-            c.hour = 23 // hour at witch widget get updated
+            c.hour = 0 // hour at witch widget get updated
             c.minute = 0
             c.second = 0
             if (c.time <= System.currentTimeMillis())

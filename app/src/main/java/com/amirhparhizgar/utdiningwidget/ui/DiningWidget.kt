@@ -18,7 +18,11 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
-import androidx.glance.layout.*
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -45,7 +49,7 @@ class DiningWidget : GlanceAppWidget() {
             getDBInstance(context).dao()
         }
 
-        val pDate = PersianDate(System.currentTimeMillis() - 4 * 60 * 60000)
+        val pDate = PersianDate(System.currentTimeMillis() + 0 * 60 * 60000)
         val dateFormat =
             PersianDateFormat("Y/m/d", PersianDateFormat.PersianDateNumberCharacter.ENGLISH)
         val dateStr = dateFormat.format(pDate)
