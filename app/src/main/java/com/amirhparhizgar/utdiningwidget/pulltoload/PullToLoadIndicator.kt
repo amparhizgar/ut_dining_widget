@@ -34,7 +34,7 @@ fun PullToLoadIndicator(
 ) {
     Crossfade(
         targetState = loading,
-        animationSpec = tween(durationMillis = CrossfadeDurationMs), label = ""
+        animationSpec = tween(durationMillis = CrossfadeDurationMs)
     ) { targetLoading ->
         Box(
             modifier = modifier
