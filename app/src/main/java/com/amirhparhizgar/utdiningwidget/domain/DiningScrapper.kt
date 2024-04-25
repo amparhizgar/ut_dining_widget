@@ -17,6 +17,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import org.jsoup.Jsoup
 import javax.inject.Inject
@@ -197,36 +198,7 @@ class DiningScrapper @Inject constructor(
                     fetch()
                 }
             }
-            extract(group, restaurant, reserveHtml)
-        }
-    }
-
-    private suspend fun extract(group: Group, restaurant: Restaurant, reserveHtml: String) {
-        val masterDivXpath = "//*[@id=\"myTabContent6\"]/div[2]"
-        val masterDiv = Jsoup.parse(reserveHtml).selectXpath(masterDivXpath)[0]
-        masterDiv.children().drop(2).forEach { masterDivChild ->
-            val header = masterDivChild.children()[0]
-            val mealName = header.child(0).text()
-            masterDivChild.children().drop(1).forEach { day ->
-                val date = day.getElementById("DateDiv")?.text()
-                val foods = day.getElementsByClass("reserveFoodFoodDiv")
-                foods.forEach { foodItem ->
-                    val checked = foodItem.getElementsByTag("input")[0]
-                        .attr("checked") == "checked"
-                    val foodNameLabels = foodItem.getElementsByTag("label")
-                    val label = foodNameLabels[0].ownText()
-                    val record = ReserveRecord(
-                        date!!.substringAfter("-").toJalali().toLongFormat(),
-                        mealName,
-                        group.id.toInt(),
-                        restaurant.name,
-                        label,
-                        checked
-                    )
-                    results.send(record)
-                    Log.d(TAG, "$date: $mealName: $checked")
-                }
-            }
+            extract(group, restaurant, reserveHtml, uniConfig).collect(results::send)
         }
     }
 
@@ -285,5 +257,35 @@ class DiningScrapper @Inject constructor(
     }
 }
 
+fun extract(group: Group, restaurant: Restaurant, reserveHtml: String, uniConfig: UniConfig) =
+    flow {
+        val masterDiv = Jsoup.parse(reserveHtml).selectXpath(uniConfig.myTabContent6Xpath)[0]
+        masterDiv.children().drop(2).forEach { masterDivChild ->
+            val header = masterDivChild.children()[0]
+            val mealName = header.child(0).text()
+            masterDivChild.children().drop(1).forEach { day ->
+                val date = day.getElementById("DateDiv")?.text()
+                val foods = day.getElementsByClass("reserveFoodFoodDiv")
+                foods.forEach { foodItem ->
+                    val checked = foodItem.getElementsByTag("input")[0]
+                        .attr("checked") == "checked"
+                    val foodNameLabels = foodItem.getElementsByTag("label")
+                    val label = foodNameLabels[0].ownText()
+                    val record = ReserveRecord(
+                        date!!.substringAfter("-").toJalali().toLongFormat(),
+                        mealName,
+                        group.id.toInt(),
+                        restaurant.name,
+                        label,
+                        checked
+                    )
+                    emit(record)
+                    Log.d(TAG, "$date: $mealName: $ $checked")
+                }
+            }
+        }
+    }
+
 @Suppress("unused")
 class WebResourceException(message: String, val code: Int) : Exception(message)
+class HtmlParseException(message: String = "خطای استخراج داده!") : Exception(message)

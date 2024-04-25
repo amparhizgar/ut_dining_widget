@@ -7,5 +7,6 @@ data class UTConfig(
     override val loginURL: String = "https://dining2.ut.ac.ir",
     override val reservesURL: String = "https://dining2.ut.ac.ir/Reserves",
     override val usernameField: String = "Username",
-    override val passwordField: String = "password"
+    override val passwordField: String = "password",
+    override val myTabContent6Xpath: String = "//*[@id=\"myTabContent6\"]/div[2]"
 ): UniConfig

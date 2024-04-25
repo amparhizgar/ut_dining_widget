@@ -7,5 +7,6 @@ data class QomUniConfig(
     override val loginURL: String = "https://food.qom.ac.ir",
     override val reservesURL: String = "https://food.qom.ac.ir/Reserves",
     override val usernameField: String = "UserName",
-    override val passwordField: String = "Password"
+    override val passwordField: String = "Password",
+    override val myTabContent6Xpath: String = "//*[@id=\"myTabContent6\"]/div"
 ): UniConfig

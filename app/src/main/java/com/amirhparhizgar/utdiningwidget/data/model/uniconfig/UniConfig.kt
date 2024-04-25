@@ -8,4 +8,5 @@ interface UniConfig {
     val reservesURL: String
     val usernameField: String
     val passwordField: String
+    val myTabContent6Xpath: String
 }
